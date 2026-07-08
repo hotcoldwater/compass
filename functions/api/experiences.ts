@@ -20,8 +20,26 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
   });
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'unknown error';
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
+    if (!context.env.DATABASE_URL) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: 'DATABASE_URL 환경변수가 설정되지 않았습니다.',
+        },
+        500
+      );
+    }
+
     const sql = neon(context.env.DATABASE_URL);
 
     const rows = await sql<ExperienceRow[]>`
@@ -41,7 +59,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return jsonResponse(
       {
         ok: false,
-        error: '경험 목록을 불러오지 못했습니다.',
+        error: `경험 목록을 불러오지 못했습니다. (${getErrorMessage(error)})`,
       },
       500
     );
@@ -50,6 +68,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
+    if (!context.env.DATABASE_URL) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: 'DATABASE_URL 환경변수가 설정되지 않았습니다.',
+        },
+        500
+      );
+    }
+
     const sql = neon(context.env.DATABASE_URL);
     const body = (await context.request.json()) as Partial<ExperienceRow>;
     const experienceType = String(body.experience_type || '').trim();
@@ -111,7 +139,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return jsonResponse(
       {
         ok: false,
-        error: '경험 저장 중 문제가 발생했습니다.',
+        error: `경험 저장 중 문제가 발생했습니다. (${getErrorMessage(error)})`,
       },
       500
     );
