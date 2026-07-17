@@ -53,7 +53,7 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
 
     let generation = await generateAnswer(env, {
       ...baseInput,
-      instructions: { tone: 'professional', structure: 'conclusion_first' },
+      instructions: { tone: 'professional', structure: 'hook_main_conclusion' },
     });
     if (!generation.answer) return cardJson({ ok: false, error: 'AI가 초안을 만들지 못했습니다.' }, 500);
 
@@ -62,7 +62,7 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     if (question.limit_type !== 'none' && target > 0 && measure(generation.answer) < target * 0.85) {
       const expanded = await generateAnswer(env, {
         ...baseInput,
-        instructions: { tone: 'professional', structure: 'conclusion_first', mode: 'expand', targetLength: target, targetUnit: question.limit_type },
+        instructions: { tone: 'professional', structure: 'hook_main_conclusion', mode: 'expand', targetLength: target, targetUnit: question.limit_type },
         previousAnswer: generation.answer,
       }).catch(() => null);
       if (expanded?.answer && measure(expanded.answer) > measure(generation.answer) && measure(expanded.answer) <= target) {
