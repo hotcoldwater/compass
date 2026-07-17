@@ -44,6 +44,16 @@ npm run dev:pages
 
 기능을 추가하거나 동작을 변경할 때마다 이 README의 기능·테스트 방법을 갱신하고, [PROGRESS.md](./PROGRESS.md)에 README 기준 Phase 진행 상태와 다음 개발 항목을 반영합니다.
 
+## AI 세부 내용 추천 설정
+
+AI 추천은 사용자가 작성한 원문 메모를 바탕으로 구조화 후보를 제안하며, 자동 저장하지 않습니다. Cloudflare Pages 환경변수 또는 로컬 `.dev.vars`에 아래 값을 설정하면 사용할 수 있습니다.
+
+```env
+AI_PROVIDER=openai-compatible
+AI_API_KEY=
+AI_MODEL=
+```
+
 ## DB 설정
 
 Neon DB에서 `schema.sql`의 SQL을 실행합니다. Neon SQL Editor 또는 PostgreSQL 클라이언트에서 적용할 수 있습니다. 로그인 기능을 위해 Auth.js용 `users`, `accounts`, `sessions`, `verification_token` 테이블과 `experiences.user_id` 컬럼이 함께 생성됩니다.

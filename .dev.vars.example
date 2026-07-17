@@ -4,3 +4,8 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST/dbname?sslmode=require
 AUTH_SECRET=replace-with-a-long-random-value
 AUTH_GOOGLE_ID=replace-with-google-client-id
 AUTH_GOOGLE_SECRET=replace-with-google-client-secret
+
+# AI 세부 내용 추천 (OpenAI-compatible Chat Completions)
+AI_PROVIDER=openai-compatible
+AI_API_KEY=
+AI_MODEL=
