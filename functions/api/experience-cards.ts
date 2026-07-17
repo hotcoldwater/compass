@@ -1,0 +1,11 @@
+import { neon } from '@neondatabase/serverless';
+import { getAuthenticatedUser, type AuthEnv } from '../_lib/auth';
+import { cardJson, ensureExperienceCardTables, saveCard } from '../_lib/experience-cards';
+
+export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env }) => { try {
+  const user = await getAuthenticatedUser(request, env); if (!user) return cardJson({ ok: false, error: '로그인이 필요합니다.' }, 401);
+  await ensureExperienceCardTables(env); const sql = neon(env.DATABASE_URL); const url = new URL(request.url); const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 20, 1), 50); const cursor = Number(url.searchParams.get('cursor')) || 0;
+  const rows = await sql`SELECT c.id,c.category,c.title,c.organization,c.role,c.start_date::text AS start_date,c.end_date::text AS end_date,c.is_ongoing,c.summary,c.tags,c.status,c.created_at::text AS created_at,c.updated_at::text AS updated_at,(SELECT COUNT(*)::int FROM experience_metrics m WHERE m.experience_card_id=c.id AND m.verification_status='confirmed') AS confirmed_metric_count,(SELECT COUNT(*)::int FROM experience_story_angles s WHERE s.experience_card_id=c.id) AS story_count,COALESCE((SELECT array_agg(competency_name) FROM (SELECT competency_name FROM experience_competencies ec WHERE ec.experience_card_id=c.id LIMIT 3) x), ARRAY[]::text[]) AS competencies FROM experience_cards c WHERE c.user_id=${user.id} AND c.id > ${cursor} ORDER BY c.id ASC LIMIT ${limit + 1}`;
+  const items = rows.slice(0, limit); return cardJson({ ok: true, data: { items, nextCursor: rows.length > limit ? items[items.length - 1].id : null } });
+} catch { return cardJson({ ok: false, error: '경험카드를 불러오지 못했습니다.' }, 500); } };
+export const onRequestPost: PagesFunction<AuthEnv> = async ({ request, env }) => { try { const user = await getAuthenticatedUser(request, env); if (!user) return cardJson({ ok: false, error: '로그인이 필요합니다.' }, 401); await ensureExperienceCardTables(env); const detail = await saveCard(env, user, await request.json() as Record<string, unknown>); return cardJson({ ok: true, data: detail }, 201); } catch (error) { return cardJson({ ok: false, error: error instanceof Error ? error.message : '경험카드 저장에 실패했습니다.' }, 400); } };

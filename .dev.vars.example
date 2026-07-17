@@ -1,0 +1,6 @@
+# Copy this file to .dev.vars for `npm run dev:pages`.
+# Use a separate local/test Neon database whenever possible.
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/dbname?sslmode=require
+AUTH_SECRET=replace-with-a-long-random-value
+AUTH_GOOGLE_ID=replace-with-google-client-id
+AUTH_GOOGLE_SECRET=replace-with-google-client-secret

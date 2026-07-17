@@ -89,3 +89,64 @@ CREATE TABLE IF NOT EXISTS resume_questions (
 
 CREATE INDEX IF NOT EXISTS idx_resume_questions_resume_id
   ON resume_questions (resume_id, sort_order, id);
+
+-- Experience-card archive. Existing free-form experiences are intentionally retained.
+CREATE TABLE IF NOT EXISTS experience_cards (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  legacy_experience_id INTEGER UNIQUE REFERENCES experiences(id) ON DELETE SET NULL,
+  category TEXT NOT NULL, title TEXT NOT NULL, organization TEXT, role TEXT,
+  start_date DATE, end_date DATE, is_ongoing BOOLEAN NOT NULL DEFAULT FALSE,
+  raw_note TEXT NOT NULL DEFAULT '', situation TEXT NOT NULL DEFAULT '', task TEXT NOT NULL DEFAULT '',
+  actions JSONB NOT NULL DEFAULT '[]'::jsonb, result TEXT NOT NULL DEFAULT '', learning TEXT NOT NULL DEFAULT '', summary TEXT NOT NULL DEFAULT '',
+  tags TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[], status TEXT NOT NULL DEFAULT 'memo',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT experience_cards_status_check CHECK (status IN ('memo', 'structured', 'ready', 'archived')),
+  CONSTRAINT experience_cards_period_check CHECK (is_ongoing OR start_date IS NULL OR end_date IS NULL OR start_date <= end_date)
+);
+CREATE INDEX IF NOT EXISTS experience_cards_user_updated_idx ON experience_cards (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS experience_cards_user_category_idx ON experience_cards (user_id, category);
+CREATE INDEX IF NOT EXISTS experience_cards_tags_gin_idx ON experience_cards USING GIN (tags);
+
+CREATE TABLE IF NOT EXISTS experience_metrics (
+  id SERIAL PRIMARY KEY, experience_card_id INTEGER NOT NULL REFERENCES experience_cards(id) ON DELETE CASCADE,
+  label TEXT NOT NULL, metric_type TEXT NOT NULL DEFAULT 'other', before_value NUMERIC, after_value NUMERIC, absolute_value NUMERIC, unit TEXT,
+  display_text TEXT NOT NULL, calculation_note TEXT, evidence_note TEXT, verification_status TEXT NOT NULL DEFAULT 'needs_verification', sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT experience_metrics_type_check CHECK (metric_type IN ('count','rate','amount','duration','score','rank','quality','other')),
+  CONSTRAINT experience_metrics_verification_check CHECK (verification_status IN ('confirmed','estimated','needs_verification'))
+);
+CREATE TABLE IF NOT EXISTS experience_competencies (
+  id SERIAL PRIMARY KEY, experience_card_id INTEGER NOT NULL REFERENCES experience_cards(id) ON DELETE CASCADE,
+  competency_name TEXT NOT NULL, strength_score INTEGER, evidence TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT 'manual', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT experience_competencies_score_check CHECK (strength_score IS NULL OR strength_score BETWEEN 1 AND 5),
+  CONSTRAINT experience_competencies_source_check CHECK (source IN ('manual','ai_suggested','ai_confirmed'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS experience_competencies_unique_idx ON experience_competencies (experience_card_id, competency_name);
+CREATE TABLE IF NOT EXISTS experience_story_angles (
+  id SERIAL PRIMARY KEY, experience_card_id INTEGER NOT NULL REFERENCES experience_cards(id) ON DELETE CASCADE,
+  angle_type TEXT NOT NULL, title TEXT NOT NULL, core_message TEXT NOT NULL DEFAULT '', situation TEXT NOT NULL DEFAULT '', challenge TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT '', result TEXT NOT NULL DEFAULT '', learning TEXT NOT NULL DEFAULT '',
+  competency_names TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[], metric_ids INTEGER[] NOT NULL DEFAULT ARRAY[]::INTEGER[], suitable_question_types TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[], source TEXT NOT NULL DEFAULT 'manual', is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT experience_story_angles_source_check CHECK (source IN ('manual','ai_suggested','ai_confirmed'))
+);
+CREATE INDEX IF NOT EXISTS experience_story_angles_card_idx ON experience_story_angles (experience_card_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS resume_question_experience_links (
+  id SERIAL PRIMARY KEY,
+  resume_question_id INTEGER NOT NULL REFERENCES resume_questions(id) ON DELETE CASCADE,
+  experience_card_id INTEGER NOT NULL REFERENCES experience_cards(id) ON DELETE CASCADE,
+  story_angle_id INTEGER REFERENCES experience_story_angles(id) ON DELETE SET NULL,
+  link_order INTEGER NOT NULL DEFAULT 0,
+  is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+  note TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (resume_question_id, experience_card_id, story_angle_id)
+);
+CREATE INDEX IF NOT EXISTS resume_question_experience_links_question_idx
+  ON resume_question_experience_links (resume_question_id, link_order, id);
+
+INSERT INTO experience_cards (user_id, legacy_experience_id, category, title, raw_note, status, created_at, updated_at)
+SELECT user_id, id, experience_type, LEFT(REGEXP_REPLACE(content, E'[\\n\\r]+', ' ', 'g'), 60), content, 'memo', created_at, updated_at
+FROM experiences WHERE user_id IS NOT NULL
+ON CONFLICT (legacy_experience_id) DO NOTHING;

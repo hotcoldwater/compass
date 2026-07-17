@@ -16,6 +16,8 @@ import type {
   ResumePayloadQuestion,
   ResumeRecord,
 } from './types';
+import { ExperienceArchive } from './features/experience-cards/ExperienceArchive';
+import { ResumeExperienceLinks } from './features/resumes/ResumeExperienceLinks';
 
 const EXPERIENCE_TYPES = [
   '학업',
@@ -31,7 +33,7 @@ const EXPERIENCE_TYPES = [
   '개인사업/창업/사이드프로젝트',
 ] as const;
 
-const PRIMARY_SECTIONS = ['새 자소서', '경험 기록', '일정'] as const;
+const PRIMARY_SECTIONS = ['새 자소서', '경험 아카이브', '일정'] as const;
 const STEP_ITEMS = [
   { id: 1, label: '기본정보 입력' },
   { id: 2, label: '자소서 작성' },
@@ -41,6 +43,28 @@ const LIMIT_OPTIONS: Array<{ value: ResumeLimitType; label: string }> = [
   { value: 'bytes', label: 'byte' },
   { value: 'none', label: '제한없음' },
 ];
+const EXAMPLE_QUESTIONS = [
+  {
+    label: '지원 동기',
+    text: '지원한 회사와 직무에 관심을 갖게 된 계기와, 이를 위해 준비한 경험을 구체적으로 기술해 주십시오.',
+  },
+  {
+    label: '직무 역량',
+    text: '지원 직무를 수행하는 데 필요한 역량은 무엇이라고 생각하며, 이를 보여주는 본인의 경험과 기여를 설명해 주십시오.',
+  },
+  {
+    label: '문제 해결',
+    text: '목표를 달성하는 과정에서 예상하지 못한 문제를 발견하고 해결한 경험을 상황, 행동, 결과 중심으로 기술해 주십시오.',
+  },
+  {
+    label: '협업',
+    text: '다른 사람과 협업하며 서로 다른 의견을 조율하고 공동의 성과를 만든 경험을 본인의 역할 중심으로 기술해 주십시오.',
+  },
+  {
+    label: '실패와 개선',
+    text: '실패하거나 기대에 미치지 못한 결과를 개선한 경험과, 그 과정에서 배운 점을 구체적으로 기술해 주십시오.',
+  },
+] as const;
 const WEEK_LABELS = ['일', '월', '화', '수', '목', '금', '토'] as const;
 
 type PrimarySection = (typeof PRIMARY_SECTIONS)[number];
@@ -428,6 +452,19 @@ export default function App() {
     }));
   }
 
+  function addExampleQuestion(questionText: string) {
+    setResumeDraft((prev) => ({
+      ...prev,
+      questions: [
+        ...prev.questions.filter((question) => question.question_text.trim() !== ''),
+        {
+          ...createQuestion(prev.questions.length),
+          question_text: questionText,
+        },
+      ],
+    }));
+  }
+
   function removeQuestion(clientId: string) {
     setResumeDraft((prev) => ({
       ...prev,
@@ -570,6 +607,27 @@ export default function App() {
             >
               add
             </button>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+            <div className="text-sm font-medium text-neutral-700">
+              경험카드 활용 문항 예시
+            </div>
+            <p className="mt-1 text-xs leading-5 text-neutral-500">
+              예시를 추가한 뒤, 작성 단계에서 경험카드와 스토리 각도를 연결해 보세요.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {EXAMPLE_QUESTIONS.map((example) => (
+                <button
+                  key={example.label}
+                  type="button"
+                  onClick={() => addExampleQuestion(example.text)}
+                  className="rounded-xl border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-700 transition hover:border-neutral-400"
+                >
+                  + {example.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -724,6 +782,10 @@ export default function App() {
                   ? `${currentLength}`
                   : `${currentLength} / ${limitValue || 0}${limitLabel}`}
               </div>
+              <ResumeExperienceLinks
+                questionId={question.id}
+                disabled={!session?.user.id}
+              />
             </article>
           );
         })}
@@ -908,8 +970,8 @@ export default function App() {
   }
 
   function renderMainContent() {
-    if (activeSection === '경험 기록') {
-      return renderExperienceSection();
+    if (activeSection === '경험 아카이브') {
+      return <ExperienceArchive enabled={Boolean(session?.user.id)} />;
     }
 
     if (activeSection === '일정') {

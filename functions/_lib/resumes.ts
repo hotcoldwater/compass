@@ -153,7 +153,7 @@ export async function loadResumeRecords(
 ): Promise<ResumeRecord[]> {
   const sql = neon(env.DATABASE_URL);
 
-  const resumes = await sql<ResumeRow[]>`
+  const resumes = (await sql`
     SELECT
       id,
       company_name,
@@ -165,9 +165,9 @@ export async function loadResumeRecords(
     FROM resumes
     WHERE user_id = ${user.id}
     ORDER BY updated_at DESC, id DESC
-  `;
+  `) as ResumeRow[];
 
-  const questions = await sql<ResumeQuestionRow[]>`
+  const questions = (await sql`
     SELECT
       id,
       resume_id,
@@ -183,7 +183,7 @@ export async function loadResumeRecords(
       WHERE user_id = ${user.id}
     )
     ORDER BY resume_id DESC, sort_order ASC, id ASC
-  `;
+  `) as Array<ResumeQuestionRow & { resume_id: number }>;
 
   const questionMap = new Map<number, ResumeQuestionRow[]>();
 
@@ -215,7 +215,7 @@ export async function createResumeRecord(
   const sql = neon(env.DATABASE_URL);
   const normalized = normalizeResumePayload(body);
 
-  const insertedRows = await sql<ResumeRow[]>`
+  const insertedRows = (await sql`
     INSERT INTO resumes (
       user_id,
       company_name,
@@ -238,7 +238,7 @@ export async function createResumeRecord(
       job_field,
       created_at::text AS created_at,
       updated_at::text AS updated_at
-  `;
+  `) as ResumeRow[];
 
   const resume = insertedRows[0];
 
@@ -276,7 +276,7 @@ export async function updateResumeRecord(
   const sql = neon(env.DATABASE_URL);
   const normalized = normalizeResumePayload(body);
 
-  const existing = await sql<ResumeRow[]>`
+  const existing = (await sql`
     SELECT
       id,
       company_name,
@@ -289,7 +289,7 @@ export async function updateResumeRecord(
     WHERE id = ${id}
       AND user_id = ${user.id}
     LIMIT 1
-  `;
+  `) as ResumeRow[];
 
   if (existing.length === 0) {
     return null;

@@ -1,0 +1,6 @@
+import type { ExperienceCard, ExperienceCardDetail } from './types';
+async function read<T>(response: Response) { const body = await response.json() as { ok: boolean; data?: T; error?: string }; if (!response.ok || !body.ok || !body.data) throw new Error(body.error || '요청을 처리하지 못했습니다.'); return body.data; }
+export async function listExperienceCards() { return read<{ items: ExperienceCard[]; nextCursor: number | null }>(await fetch('/api/experience-cards')); }
+export async function loadExperienceCard(id: number) { return read<ExperienceCardDetail>(await fetch(`/api/experience-cards/${id}`)); }
+export async function saveExperienceCard(input: Omit<Partial<ExperienceCardDetail['card']>, 'competencies'> & { metrics?: unknown[]; competencies?: unknown[]; storyAngles?: unknown[] }) { const id = input.id; return read<ExperienceCardDetail>(await fetch(id ? `/api/experience-cards/${id}` : '/api/experience-cards', { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) })); }
+export async function archiveExperienceCard(id: number) { return read<ExperienceCardDetail>(await fetch(`/api/experience-cards/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'archived' }) })); }
