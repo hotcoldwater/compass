@@ -39,6 +39,8 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     if (!context.ok) return cardJson({ ok: false, error: context.error }, context.status);
     const { question, facts, confirmedMetrics, primaryExperienceCardId } = context.data;
 
+    const isHashtagQuestion = /해시태그|#\s*[^\s]+\s*,?\s*#/.test(question.question_text);
+
     const baseInput = {
       companyName: question.company_name || '',
       jobField: question.job_field || '',
@@ -53,13 +55,15 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
 
     let generation = await generateAnswer(env, {
       ...baseInput,
-      instructions: { tone: 'professional', structure: 'hook_main_conclusion' },
+      instructions: isHashtagQuestion
+        ? { tone: 'professional', format: 'hashtags' }
+        : { tone: 'professional', structure: 'hook_main_conclusion' },
     });
     if (!generation.answer) return cardJson({ ok: false, error: 'AI가 초안을 만들지 못했습니다.' }, 500);
 
     const target = Number(question.limit_value);
     const measure = (text: string) => (question.limit_type === 'bytes' ? bytes(text) : text.length);
-    if (question.limit_type !== 'none' && target > 0 && measure(generation.answer) < target * 0.85) {
+    if (!isHashtagQuestion && question.limit_type !== 'none' && target > 0 && measure(generation.answer) < target * 0.85) {
       const expanded = await generateAnswer(env, {
         ...baseInput,
         instructions: { tone: 'professional', structure: 'hook_main_conclusion', mode: 'expand', targetLength: target, targetUnit: question.limit_type },
