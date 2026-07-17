@@ -25,7 +25,11 @@ export async function suggestExperienceStructure(env: AiEnv, input: { rawNote: s
     { role: 'system', content: 'You structure a Korean job-application experience note. Return JSON only. Never invent facts, numbers, employers, outcomes, or individual contributions. Use only facts from rawNote and existingFacts. If a field has no evidence, return an empty string. Each action must include an exact or near-exact sourceSentence from rawNote. Put missing details as questions, not claims.' },
     { role: 'user', content: JSON.stringify({ category: input.category, organization: input.organization, rawNote: input.rawNote, existingFacts: input.existingFacts, outputShape: { title: 'string', summary: 'string', situation: 'string', task: 'string', actions: [{ text: 'string', sourceSentence: 'string' }], result: 'string', learning: 'string', missingInformationQuestions: ['string'], unsupportedClaims: ['string'] } }) },
   ], temperature: 0.2 }) });
-  if (!response.ok) throw new Error('AI 제안을 생성하지 못했습니다. API 키와 모델 설정을 확인해주세요.');
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+    const providerMessage = errorBody?.error?.message || '제공자 응답을 읽지 못했습니다.';
+    throw new Error(`AI 제안을 생성하지 못했습니다 (${response.status}): ${providerMessage}`);
+  }
   const body = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
   const content = body.choices?.[0]?.message?.content;
   if (!content) throw new Error('AI 응답이 비어 있습니다.');

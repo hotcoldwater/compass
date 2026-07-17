@@ -60,6 +60,8 @@ AI_API_KEY=
 AI_MODEL=
 ```
 
+AI 호출이 실패하면 화면에 제공자 오류 상태와 메시지를 표시합니다. API 키·모델 ID·OpenAI API 사용 한도를 확인하세요.
+
 ## DB 설정
 
 Neon DB에서 `schema.sql`의 SQL을 실행합니다. Neon SQL Editor 또는 PostgreSQL 클라이언트에서 적용할 수 있습니다. 로그인 기능을 위해 Auth.js용 `users`, `accounts`, `sessions`, `verification_token` 테이블과 `experiences.user_id` 컬럼이 함께 생성됩니다.
