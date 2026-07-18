@@ -72,6 +72,7 @@ type ResumeDraft = {
 };
 
 const encoder = new TextEncoder();
+const GUEST_MODE_STORAGE_KEY = 'compass-guest-mode';
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -184,6 +185,11 @@ export default function App() {
   const [session, setSession] = useState<AppSession | null>(null);
   const [csrfToken, setCsrfToken] = useState('');
   const [isSessionLoading, setIsSessionLoading] = useState(true);
+  const [isGuestMode, setIsGuestMode] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === 'true'
+  );
   const [resumeDraft, setResumeDraft] = useState<ResumeDraft>(
     createEmptyResumeDraft()
   );
@@ -765,6 +771,59 @@ export default function App() {
     }
 
     return renderResumeSection();
+  }
+
+  function continueAsGuest() {
+    window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, 'true');
+    setIsGuestMode(true);
+  }
+
+  if (isSessionLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fafafa]">
+        <span className="text-sm text-neutral-400">불러오는 중...</span>
+      </div>
+    );
+  }
+
+  if (!session?.user && !isGuestMode) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#fafafa] px-5">
+        <div className="w-full max-w-sm rounded-3xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+          <img
+            src="/compass-logo.svg"
+            alt="Compass"
+            className="mx-auto h-12 w-12 rounded-2xl"
+          />
+          <h1 className="mt-4 text-xl font-semibold tracking-tight">
+            Compass
+          </h1>
+          <p className="mt-2 text-sm text-neutral-500">
+            경험을 기록하고, 자소서에 꺼내 쓰세요.
+          </p>
+          <form
+            method="post"
+            action="/api/auth/signin/google?callbackUrl=/"
+            className="mt-6"
+          >
+            <input type="hidden" name="csrfToken" value={csrfToken} />
+            <button
+              disabled={!csrfToken}
+              className="w-full rounded-xl bg-neutral-950 px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-neutral-300"
+            >
+              Google로 로그인
+            </button>
+          </form>
+          <button
+            type="button"
+            onClick={continueAsGuest}
+            className="mt-3 w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-600 transition hover:border-neutral-400"
+          >
+            로그인 없이 둘러보기
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
