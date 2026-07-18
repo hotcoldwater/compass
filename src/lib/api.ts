@@ -148,3 +148,15 @@ export async function updateResume(
 
   return data.resume;
 }
+
+export async function deleteResume(id: number): Promise<void> {
+  const res = await fetch(`/api/resumes/${id}`, {
+    method: 'DELETE',
+  });
+
+  const data = await readJson<{ ok: boolean; error?: string }>(res);
+
+  if (!res.ok || !data.ok) {
+    throw new Error(data.error || '자소서 삭제에 실패했습니다.');
+  }
+}

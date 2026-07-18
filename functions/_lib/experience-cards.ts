@@ -30,6 +30,12 @@ function normalize(body: CardInput) {
   return { category: text(body.category), title: text(body.title), organization: text(body.organization) || null, role: text(body.role) || null, start_date: start, end_date: end, is_ongoing: ongoing, raw_note: text(body.raw_note), situation: text(body.situation), task: text(body.task), actions: actions(body.actions), result: text(body.result), learning: text(body.learning), summary: text(body.summary), tags: textArray(body.tags), status: statuses.includes(text(body.status)) ? text(body.status) : 'memo' };
 }
 
+export async function deleteCard(env: AuthEnv, user: AuthenticatedUser, id: number) {
+  const sql = neon(env.DATABASE_URL);
+  const deleted = await sql`DELETE FROM experience_cards WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+  return deleted.length > 0;
+}
+
 export async function getCard(env: AuthEnv, user: AuthenticatedUser, id: number) {
   const sql = neon(env.DATABASE_URL);
   const cards = await sql`SELECT id, category, title, organization, role, start_date::text AS start_date, end_date::text AS end_date, is_ongoing, raw_note, situation, task, actions, result, learning, summary, tags, status, created_at::text AS created_at, updated_at::text AS updated_at FROM experience_cards WHERE id = ${id} AND user_id = ${user.id} LIMIT 1`;

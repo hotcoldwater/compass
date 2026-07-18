@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   createResume,
+  deleteResume,
   fetchCsrfToken,
   fetchResumes,
   fetchSession,
@@ -346,6 +347,30 @@ export default function App() {
     setActiveStep(hasCompleteBasicInfo(draft) ? 2 : 1);
     setResumeMessage('');
     setResumeError('');
+  }
+
+  async function removeResume(id: number) {
+    if (!window.confirm('이 자소서를 삭제하시겠습니까? 되돌릴 수 없습니다.')) {
+      return;
+    }
+
+    try {
+      await deleteResume(id);
+      setResumeRecords((prev) => prev.filter((item) => item.id !== id));
+
+      if (resumeDraft.id === id) {
+        setResumeDraft(createEmptyResumeDraft());
+        setActiveStep(1);
+      }
+
+      setResumeMessage('삭제되었습니다.');
+    } catch (deleteError) {
+      setResumeError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : '자소서 삭제 중 문제가 발생했습니다.'
+      );
+    }
   }
 
   function updateDraftField<Key extends keyof ResumeDraft>(
@@ -704,6 +729,7 @@ export default function App() {
                     questionId={question.id}
                     disabled={!session?.user.id}
                     companyInfo={question.company_info}
+                    existingAnswer={question.answer_content}
                     onApply={(answer) =>
                       updateQuestion(question.client_id, 'answer_content', answer)
                     }
@@ -750,10 +776,23 @@ export default function App() {
         {resumeRecords.length > 0 ? (
           <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
             {resumeRecords.map((record) => (
-              <button key={record.id} type="button" onClick={() => openResumeRecord(record)} className={`min-w-56 rounded-2xl border p-4 text-left ${resumeDraft.id === record.id ? 'border-neutral-950 bg-neutral-950 text-white' : 'border-neutral-200 bg-white text-neutral-900'}`}>
-                <div className="text-sm font-medium">{getResumeTitle(record)}</div>
-                <div className={`mt-2 text-xs ${resumeDraft.id === record.id ? 'text-neutral-300' : 'text-neutral-500'}`}>마지막 수정 {formatDate(record.updated_at)}</div>
-              </button>
+              <div key={record.id} className={`relative min-w-56 rounded-2xl border p-4 text-left ${resumeDraft.id === record.id ? 'border-neutral-950 bg-neutral-950 text-white' : 'border-neutral-200 bg-white text-neutral-900'}`}>
+                <button type="button" onClick={() => openResumeRecord(record)} className="block w-full text-left">
+                  <div className="pr-8 text-sm font-medium">{getResumeTitle(record)}</div>
+                  <div className={`mt-2 text-xs ${resumeDraft.id === record.id ? 'text-neutral-300' : 'text-neutral-500'}`}>마지막 수정 {formatDate(record.updated_at)}</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void removeResume(record.id);
+                  }}
+                  className={`absolute right-3 top-3 text-xs ${resumeDraft.id === record.id ? 'text-neutral-400 hover:text-white' : 'text-neutral-400 hover:text-red-600'}`}
+                  aria-label="자소서 삭제"
+                >
+                  삭제
+                </button>
+              </div>
             ))}
           </div>
         ) : null}

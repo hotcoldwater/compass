@@ -25,12 +25,17 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
       outline?: unknown;
       companyInfo?: unknown;
       followups?: unknown;
+      selectedFlow?: unknown;
     };
     const questionId = Number(body.resumeQuestionId);
     if (!Number.isInteger(questionId)) return cardJson({ ok: false, error: '저장된 자소서 문항에서만 AI 작성을 사용할 수 있습니다.' }, 400);
     const outline = String(body.outline || '').trim();
     const companyInfo = String(body.companyInfo || '').trim();
     const followups = normalizeFollowups(body.followups);
+    const rawFlow = body.selectedFlow && typeof body.selectedFlow === 'object' ? (body.selectedFlow as Record<string, unknown>) : null;
+    const selectedFlow = rawFlow && Array.isArray(rawFlow.bullets) && rawFlow.bullets.length
+      ? { title: String(rawFlow.title || '').trim(), bullets: rawFlow.bullets.map((item) => String(item || '').trim()).filter(Boolean) }
+      : undefined;
 
     const sql = neon(env.DATABASE_URL);
     await sql`CREATE TABLE IF NOT EXISTS resume_answer_versions (id SERIAL PRIMARY KEY, resume_question_id INTEGER NOT NULL REFERENCES resume_questions(id) ON DELETE CASCADE, version_number INTEGER NOT NULL, content TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'manual', generation_metadata JSONB, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (resume_question_id, version_number))`;
@@ -51,6 +56,7 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
       outline: outline || undefined,
       companyInfo: companyInfo || question.company_info || undefined,
       additionalDetails: followups.length ? followups : undefined,
+      flow: selectedFlow,
     };
 
     let generation = await generateAnswer(env, {
@@ -77,7 +83,7 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     const count = measure(generation.answer);
     const versions = await sql`SELECT COALESCE(MAX(version_number), 0)::int AS latest FROM resume_answer_versions WHERE resume_question_id=${questionId}`;
     const versionNumber = Number((versions[0] as { latest: number }).latest) + 1;
-    const inserted = await sql`INSERT INTO resume_answer_versions (resume_question_id,version_number,content,source,generation_metadata) VALUES (${questionId},${versionNumber},${generation.answer},'ai_generated',${JSON.stringify({ usedFacts: generation.usedFacts, warnings: generation.warnings, outline, followups })}::jsonb) RETURNING id`;
+    const inserted = await sql`INSERT INTO resume_answer_versions (resume_question_id,version_number,content,source,generation_metadata) VALUES (${questionId},${versionNumber},${generation.answer},'ai_generated',${JSON.stringify({ usedFacts: generation.usedFacts, warnings: generation.warnings, outline, followups, selectedFlow })}::jsonb) RETURNING id`;
 
     if (companyInfo) {
       await sql`UPDATE resume_questions SET company_info=${companyInfo} WHERE id=${questionId}`;

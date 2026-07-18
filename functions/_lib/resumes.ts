@@ -350,3 +350,20 @@ export async function updateResumeRecord(
   const records = await loadResumeRecords(env, user);
   return records.find((item) => item.id === id) || null;
 }
+
+export async function deleteResumeRecord(
+  env: Env,
+  user: AuthenticatedUser,
+  id: number
+): Promise<boolean> {
+  const sql = neon(env.DATABASE_URL);
+
+  const deleted = (await sql`
+    DELETE FROM resumes
+    WHERE id = ${id}
+      AND user_id = ${user.id}
+    RETURNING id
+  `) as Array<{ id: number }>;
+
+  return deleted.length > 0;
+}

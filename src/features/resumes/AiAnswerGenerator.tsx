@@ -11,18 +11,22 @@ type GeneratedAnswer = {
 };
 
 type Followup = { question: string; answer: string };
+type FlowOption = { title: string; bullets: string[] };
 type PlanResponse = { ok: boolean; data?: { sufficient: boolean; questions: string[] }; error?: string };
+type FlowOptionsResponse = { ok: boolean; data?: { options: FlowOption[] }; error?: string };
 type GenerateResponse = { ok: boolean; data?: GeneratedAnswer; error?: string };
 
 export function AiAnswerGenerator({
   questionId,
   disabled,
   companyInfo,
+  existingAnswer,
   onApply,
 }: {
   questionId?: number;
   disabled: boolean;
   companyInfo: string;
+  existingAnswer: string;
   onApply: (answer: string) => void;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -30,6 +34,8 @@ export function AiAnswerGenerator({
   const [followups, setFollowups] = useState<Followup[]>([]);
   const [pendingQuestions, setPendingQuestions] = useState<string[]>([]);
   const [pendingAnswers, setPendingAnswers] = useState<string[]>([]);
+  const [flowOptions, setFlowOptions] = useState<FlowOption[] | null>(null);
+  const [selectedFlowIndex, setSelectedFlowIndex] = useState<number | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [planError, setPlanError] = useState('');
 
@@ -43,10 +49,12 @@ export function AiAnswerGenerator({
       return;
     }
     setMessage('');
-    setOutline('');
+    setOutline(existingAnswer.trim());
     setFollowups([]);
     setPendingQuestions([]);
     setPendingAnswers([]);
+    setFlowOptions(null);
+    setSelectedFlowIndex(null);
     setPlanError('');
     setModalOpen(true);
   }
@@ -64,8 +72,7 @@ export function AiAnswerGenerator({
       const body = (await response.json()) as PlanResponse;
       if (!response.ok || !body.ok || !body.data) throw new Error(body.error || '답변 흐름을 점검하지 못했습니다.');
       if (body.data.sufficient) {
-        setModalOpen(false);
-        await runGenerate(currentFollowups);
+        await fetchFlowOptions(currentFollowups);
       } else {
         setPendingQuestions(body.data.questions);
         setPendingAnswers(body.data.questions.map(() => ''));
@@ -77,9 +84,30 @@ export function AiAnswerGenerator({
     }
   }
 
+  async function fetchFlowOptions(currentFollowups: Followup[]) {
+    if (!questionId) return;
+    setPlanLoading(true);
+    setPlanError('');
+    try {
+      const response = await fetch('/api/ai/flow-options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resumeQuestionId: questionId, outline, companyInfo, followups: currentFollowups }),
+      });
+      const body = (await response.json()) as FlowOptionsResponse;
+      if (!response.ok || !body.ok || !body.data) throw new Error(body.error || '초안 흐름을 제안받지 못했습니다.');
+      setFlowOptions(body.data.options);
+      setSelectedFlowIndex(null);
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : '초안 흐름을 제안받지 못했습니다.');
+    } finally {
+      setPlanLoading(false);
+    }
+  }
+
   function submitOutline() {
     if (!outline.trim()) {
-      setPlanError('답변 흐름을 먼저 입력해주세요.');
+      setPlanError('답변 흐름 또는 이미 작성한 내용을 입력해주세요.');
       return;
     }
     void checkPlan(followups);
@@ -101,7 +129,16 @@ export function AiAnswerGenerator({
     void checkPlan(nextFollowups);
   }
 
-  async function runGenerate(finalFollowups: Followup[]) {
+  function confirmFlow() {
+    if (selectedFlowIndex === null || !flowOptions) {
+      setPlanError('흐름을 하나 선택해주세요.');
+      return;
+    }
+    setModalOpen(false);
+    void runGenerate(followups, flowOptions[selectedFlowIndex]);
+  }
+
+  async function runGenerate(finalFollowups: Followup[], flow?: FlowOption) {
     if (!questionId) return;
     setLoading(true);
     setMessage('');
@@ -109,7 +146,7 @@ export function AiAnswerGenerator({
       const response = await fetch('/api/ai/generate-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeQuestionId: questionId, outline, companyInfo, followups: finalFollowups }),
+        body: JSON.stringify({ resumeQuestionId: questionId, outline, companyInfo, followups: finalFollowups, selectedFlow: flow }),
       });
       const body = (await response.json()) as GenerateResponse;
       if (!response.ok || !body.ok || !body.data) throw new Error(body.error || 'AI 초안을 생성하지 못했습니다.');
@@ -139,34 +176,15 @@ export function AiAnswerGenerator({
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-neutral-900">답변 흐름 작성</h3>
+              <h3 className="text-sm font-semibold text-neutral-900">
+                {flowOptions ? '초안 흐름 선택' : pendingQuestions.length > 0 ? '추가 질문' : '답변 흐름 작성'}
+              </h3>
               <button type="button" onClick={() => setModalOpen(false)} className="text-xs text-neutral-400">
                 닫기
               </button>
             </div>
 
-            {pendingQuestions.length === 0 ? (
-              <div className="space-y-3">
-                <p className="text-xs text-neutral-500">
-                  문항 답변의 흐름(개요)을 적어주세요. 흐름만으로 초안 작성이 부족하면 AI가 추가 질문을 합니다.
-                </p>
-                <textarea
-                  className="min-h-[140px] w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-400"
-                  value={outline}
-                  onChange={(event) => setOutline(event.target.value)}
-                  placeholder="예) 상황 → 내가 시도한 방법 → 결과 → 이 경험이 지원 직무와 연결되는 지점"
-                />
-                {planError ? <p className="text-xs text-red-700">{planError}</p> : null}
-                <button
-                  type="button"
-                  disabled={planLoading}
-                  onClick={submitOutline}
-                  className="rounded-lg bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300"
-                >
-                  {planLoading ? '확인 중...' : '다음'}
-                </button>
-              </div>
-            ) : (
+            {pendingQuestions.length > 0 ? (
               <div className="space-y-3">
                 <p className="text-xs text-neutral-500">초안 작성에 필요한 추가 질문에 답해주세요.</p>
                 {pendingQuestions.map((question, index) => (
@@ -188,6 +206,74 @@ export function AiAnswerGenerator({
                   type="button"
                   disabled={planLoading}
                   onClick={submitFollowupAnswers}
+                  className="rounded-lg bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300"
+                >
+                  {planLoading ? '확인 중...' : '다음'}
+                </button>
+              </div>
+            ) : flowOptions ? (
+              <div className="space-y-3">
+                <p className="text-xs text-neutral-500">
+                  아래 흐름 중 하나를 고르면, 그 흐름대로 전체 초안을 작성합니다. (아직 완성된 문장이 아니라 구성 방향입니다.)
+                </p>
+                <div className="space-y-2">
+                  {flowOptions.map((option, index) => (
+                    <button
+                      key={option.title}
+                      type="button"
+                      onClick={() => setSelectedFlowIndex(index)}
+                      className={`w-full rounded-xl border p-3 text-left transition ${
+                        selectedFlowIndex === index
+                          ? 'border-neutral-950 bg-neutral-50'
+                          : 'border-neutral-200 bg-white hover:border-neutral-400'
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-neutral-900">{option.title}</div>
+                      <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-neutral-600">
+                        {option.bullets.map((bullet) => (
+                          <li key={bullet}>{bullet}</li>
+                        ))}
+                      </ul>
+                    </button>
+                  ))}
+                </div>
+                {planError ? <p className="text-xs text-red-700">{planError}</p> : null}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={planLoading}
+                    onClick={confirmFlow}
+                    className="rounded-lg bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300"
+                  >
+                    이 흐름으로 초안 만들기
+                  </button>
+                  <button
+                    type="button"
+                    disabled={planLoading}
+                    onClick={() => void fetchFlowOptions(followups)}
+                    className="rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 disabled:opacity-50"
+                  >
+                    {planLoading ? '다시 만드는 중...' : '다른 흐름 다시 제안받기'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-neutral-500">
+                  이미 작성한 답변이 있다면 그대로 두고, 없다면 흐름(개요)을 적어주세요. 내용이 부족하면 AI가 추가
+                  질문을 하고, 충분하면 몇 가지 구성 흐름을 제안합니다.
+                </p>
+                <textarea
+                  className="min-h-[140px] w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-400"
+                  value={outline}
+                  onChange={(event) => setOutline(event.target.value)}
+                  placeholder="예) 상황 → 내가 시도한 방법 → 결과 → 이 경험이 지원 직무와 연결되는 지점"
+                />
+                {planError ? <p className="text-xs text-red-700">{planError}</p> : null}
+                <button
+                  type="button"
+                  disabled={planLoading}
+                  onClick={submitOutline}
                   className="rounded-lg bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300"
                 >
                   {planLoading ? '확인 중...' : '다음'}
