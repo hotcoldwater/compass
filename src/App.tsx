@@ -447,7 +447,7 @@ export default function App() {
               type="button"
               onClick={() => handleStepChange(step.id)}
               disabled={isDisabled}
-              className={`rounded-2xl border px-4 py-3 text-left transition ${
+              className={`rounded-md border px-4 py-3 text-left transition ${
                 isActive
                   ? 'border-neutral-950 bg-neutral-950 text-white'
                   : 'border-neutral-200 bg-white text-neutral-700'
@@ -478,7 +478,7 @@ export default function App() {
             </label>
             <input
               id="companyName"
-              className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none transition focus:border-neutral-400"
+              className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400"
               value={resumeDraft.company_name}
               onChange={(event) =>
                 updateDraftField('company_name', event.target.value)
@@ -495,7 +495,7 @@ export default function App() {
             </label>
             <input
               id="jobField"
-              className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none transition focus:border-neutral-400"
+              className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400"
               value={resumeDraft.job_field}
               onChange={(event) =>
                 updateDraftField('job_field', event.target.value)
@@ -504,16 +504,16 @@ export default function App() {
           </div>
         </div>
 
-        <details className="rounded-2xl border border-neutral-200 bg-white p-4">
+        <details className="rounded-lg border border-neutral-200 bg-white p-4">
           <summary className="cursor-pointer text-sm font-medium text-neutral-700">
             지원 일정 추가하기 (선택)
           </summary>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm text-neutral-600">시작일
-              <input type="date" className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 outline-none" value={resumeDraft.application_start_date} onChange={(event) => updateDraftField('application_start_date', event.target.value)} />
+              <input type="date" className="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none" value={resumeDraft.application_start_date} onChange={(event) => updateDraftField('application_start_date', event.target.value)} />
             </label>
             <label className="text-sm text-neutral-600">마감일
-              <input type="date" className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 outline-none" value={resumeDraft.application_end_date} onChange={(event) => updateDraftField('application_end_date', event.target.value)} />
+              <input type="date" className="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none" value={resumeDraft.application_end_date} onChange={(event) => updateDraftField('application_end_date', event.target.value)} />
             </label>
           </div>
         </details>
@@ -524,13 +524,13 @@ export default function App() {
             <button
               type="button"
               onClick={addQuestion}
-              className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-400"
+              className="rounded-md border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 transition hover:border-neutral-400"
             >
               문항 추가
             </button>
           </div>
 
-          <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+          <div className="rounded-lg border border-neutral-200 bg-white p-4">
             <div className="text-sm font-medium text-neutral-700">
               경험카드 활용 문항 예시
             </div>
@@ -543,7 +543,7 @@ export default function App() {
                   key={example.label}
                   type="button"
                   onClick={() => addExampleQuestion(example.text)}
-                  className="rounded-xl border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-700 transition hover:border-neutral-400"
+                  className="rounded-md border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-700 transition hover:border-neutral-400"
                 >
                   + {example.label}
                 </button>
@@ -555,7 +555,7 @@ export default function App() {
             {resumeDraft.questions.map((question, index) => (
               <article
                 key={question.client_id}
-                className="rounded-[28px] border border-neutral-200 bg-white p-5"
+                className="rounded-lg border border-neutral-200 bg-white p-5"
               >
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="text-sm font-medium text-neutral-700">
@@ -564,7 +564,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => removeQuestion(question.client_id)}
-                    className="rounded-2xl border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 transition hover:border-neutral-400"
+                    className="rounded-md border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 transition hover:border-neutral-400"
                   >
                     삭제
                   </button>
@@ -572,7 +572,7 @@ export default function App() {
 
                 <div className="space-y-4">
                   <textarea
-                    className="min-h-[120px] w-full resize-y rounded-2xl border border-neutral-200 bg-white px-4 py-4 outline-none transition focus:border-neutral-400"
+                    className="min-h-[120px] w-full resize-y rounded-md border border-neutral-200 bg-white px-3 py-3 outline-none transition focus:border-neutral-400"
                     value={question.question_text}
                     onChange={(event) =>
                       updateQuestion(
@@ -585,7 +585,7 @@ export default function App() {
 
                   <div className="grid gap-4 md:grid-cols-[180px_minmax(0,1fr)]">
                     <select
-                      className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none transition focus:border-neutral-400"
+                      className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400"
                       value={question.limit_type}
                       onChange={(event) =>
                         updateQuestion(
@@ -606,7 +606,7 @@ export default function App() {
                       type="number"
                       min="1"
                       disabled={question.limit_type === 'none'}
-                      className="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 outline-none transition focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
+                      className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400 disabled:cursor-not-allowed disabled:bg-neutral-100"
                       value={question.limit_value}
                       onChange={(event) =>
                         updateQuestion(
@@ -637,7 +637,7 @@ export default function App() {
             <button
               type="button"
               onClick={saveResumeDraft}
-              className="rounded-2xl border border-neutral-200 bg-white px-5 py-3 text-sm font-medium text-neutral-800 transition hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-800 transition hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isSavingResume}
             >
               {isSavingResume ? '저장 중...' : '저장'}
@@ -646,7 +646,7 @@ export default function App() {
               type="button"
               onClick={() => handleStepChange(2)}
               disabled={!canOpenStepTwo}
-              className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
+              className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
             >
               다음
             </button>
@@ -679,7 +679,7 @@ export default function App() {
           return (
             <article
               key={question.client_id}
-              className="rounded-[28px] border border-neutral-200 bg-white p-5"
+              className="rounded-lg border border-neutral-200 bg-white p-5"
             >
               <div className="mb-3 text-sm font-medium text-neutral-700">
                 질문 {index + 1}
@@ -688,7 +688,7 @@ export default function App() {
                 {question.question_text}
               </div>
               <textarea
-                className="min-h-[220px] w-full resize-y rounded-2xl border border-neutral-200 bg-white px-4 py-4 leading-7 outline-none transition focus:border-neutral-400"
+                className="min-h-[220px] w-full resize-y rounded-md border border-neutral-200 bg-white px-3 py-3 leading-7 outline-none transition focus:border-neutral-400"
                 value={question.answer_content}
                 onChange={(event) =>
                   updateQuestion(
@@ -703,7 +703,7 @@ export default function App() {
                   ? `${currentLength}`
                   : `${currentLength} / ${limitValue || 0}${limitLabel}`}
               </div>
-              <details className="mt-4 rounded-xl bg-neutral-50 p-3">
+              <details className="mt-4 rounded-lg bg-neutral-50 p-3">
                 <summary className="cursor-pointer text-sm font-medium text-neutral-700">
                   경험 선택과 AI 작성
                 </summary>
@@ -717,7 +717,7 @@ export default function App() {
                       기업 정보 (인재상·정책·신년사 등, 선택)
                     </label>
                     <textarea
-                      className="mt-2 min-h-[80px] w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
+                      className="mt-2 min-h-[80px] w-full resize-y rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
                       placeholder="지원동기 등 기업 연계형 문항에서 참고할 기업 정보를 붙여넣으세요."
                       value={question.company_info}
                       onChange={(event) =>
@@ -753,7 +753,7 @@ export default function App() {
           <button
             type="button"
             onClick={saveResumeDraft}
-            className="rounded-2xl bg-black px-5 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
+            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-300"
             disabled={isSavingResume}
           >
             {isSavingResume ? '저장 중...' : '저장'}
@@ -771,12 +771,12 @@ export default function App() {
             <h1 className="text-3xl font-semibold tracking-tight">자소서</h1>
             <p className="mt-2 text-sm text-neutral-500">경험을 고르고, 필요한 문항만 작성하세요.</p>
           </div>
-          <button type="button" onClick={openNewResume} className="rounded-xl bg-neutral-950 px-4 py-3 text-sm font-medium text-white">+ 새 자소서</button>
+          <button type="button" onClick={openNewResume} className="rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white">+ 새 자소서</button>
         </div>
         {resumeRecords.length > 0 ? (
           <div className="mb-6 flex gap-3 overflow-x-auto pb-1">
             {resumeRecords.map((record) => (
-              <div key={record.id} className={`relative min-w-56 rounded-2xl border p-4 text-left ${resumeDraft.id === record.id ? 'border-neutral-950 bg-neutral-950 text-white' : 'border-neutral-200 bg-white text-neutral-900'}`}>
+              <div key={record.id} className={`relative min-w-56 rounded-lg border p-4 text-left ${resumeDraft.id === record.id ? 'border-neutral-950 bg-neutral-950 text-white' : 'border-neutral-200 bg-white text-neutral-900'}`}>
                 <button type="button" onClick={() => openResumeRecord(record)} className="block w-full text-left">
                   <div className="pr-8 text-sm font-medium">{getResumeTitle(record)}</div>
                   <div className={`mt-2 text-xs ${resumeDraft.id === record.id ? 'text-neutral-300' : 'text-neutral-500'}`}>마지막 수정 {formatDate(record.updated_at)}</div>
@@ -796,7 +796,7 @@ export default function App() {
             ))}
           </div>
         ) : null}
-        <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-[#f7f7f8] shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-[#f7f7f8] shadow-sm">
         {renderResumeStepNavigation()}
         {activeStep === 1 ? renderResumeBasicInfo() : renderResumeWriting()}
         </div>
@@ -828,11 +828,11 @@ export default function App() {
   if (!session?.user && !isGuestMode) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fafafa] px-5">
-        <div className="w-full max-w-sm rounded-3xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+        <div className="w-full max-w-sm rounded-lg border border-neutral-200 bg-white p-8 text-center shadow-sm">
           <img
             src="/compass-logo.svg"
             alt="Compass"
-            className="mx-auto h-12 w-12 rounded-2xl"
+            className="mx-auto h-12 w-12 rounded-md"
           />
           <h1 className="mt-4 text-xl font-semibold tracking-tight">
             Compass
@@ -848,7 +848,7 @@ export default function App() {
             <input type="hidden" name="csrfToken" value={csrfToken} />
             <button
               disabled={!csrfToken}
-              className="w-full rounded-xl bg-neutral-950 px-4 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-neutral-300"
+              className="w-full rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-neutral-300"
             >
               Google로 로그인
             </button>
@@ -856,7 +856,7 @@ export default function App() {
           <button
             type="button"
             onClick={continueAsGuest}
-            className="mt-3 w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-600 transition hover:border-neutral-400"
+            className="mt-3 w-full rounded-md border border-neutral-200 px-4 py-2 text-sm font-medium text-neutral-600 transition hover:border-neutral-400"
           >
             로그인 없이 둘러보기
           </button>
@@ -872,11 +872,11 @@ export default function App() {
           <button type="button" onClick={() => setActiveSection('경험 아카이브')} className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             <img src="/compass-logo.svg" alt="Compass" className="h-8 w-8 rounded-lg" /> Compass
           </button>
-          <nav className="flex items-center gap-1 rounded-xl bg-neutral-100 p-1">
-            <button type="button" onClick={() => setActiveSection('경험 아카이브')} className={`rounded-lg px-4 py-2 text-sm font-medium ${activeSection === '경험 아카이브' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>경험</button>
-            <button type="button" onClick={() => setActiveSection('새 자소서')} className={`rounded-lg px-4 py-2 text-sm font-medium ${activeSection === '새 자소서' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>자소서</button>
+          <nav className="flex items-center gap-1 rounded-md bg-neutral-100 p-1">
+            <button type="button" onClick={() => setActiveSection('경험 아카이브')} className={`rounded-md px-4 py-2 text-sm font-medium ${activeSection === '경험 아카이브' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>경험</button>
+            <button type="button" onClick={() => setActiveSection('새 자소서')} className={`rounded-md px-4 py-2 text-sm font-medium ${activeSection === '새 자소서' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>자소서</button>
           </nav>
-          {isSessionLoading ? <span className="text-xs text-neutral-400">불러오는 중</span> : session?.user ? <form method="post" action="/api/auth/signout?callbackUrl=/" className="hidden sm:block"><input type="hidden" name="csrfToken" value={csrfToken}/><button className="text-sm text-neutral-500">로그아웃</button></form> : <form method="post" action="/api/auth/signin/google?callbackUrl=/"><input type="hidden" name="csrfToken" value={csrfToken}/><button disabled={!csrfToken} className="rounded-xl bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300">로그인</button></form>}
+          {isSessionLoading ? <span className="text-xs text-neutral-400">불러오는 중</span> : session?.user ? <form method="post" action="/api/auth/signout?callbackUrl=/" className="hidden sm:block"><input type="hidden" name="csrfToken" value={csrfToken}/><button className="text-sm text-neutral-500">로그아웃</button></form> : <form method="post" action="/api/auth/signin/google?callbackUrl=/"><input type="hidden" name="csrfToken" value={csrfToken}/><button disabled={!csrfToken} className="rounded-md bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300">로그인</button></form>}
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8">{renderMainContent()}</main>

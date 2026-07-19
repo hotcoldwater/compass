@@ -174,7 +174,7 @@ export function AiAnswerGenerator({
 
       {modalOpen ? (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-neutral-900">
                 {flowOptions ? '초안 흐름 선택' : pendingQuestions.length > 0 ? '추가 질문' : '답변 흐름 작성'}
@@ -191,7 +191,7 @@ export function AiAnswerGenerator({
                   <div key={question} className="space-y-1">
                     <label className="text-xs font-medium text-neutral-700">{question}</label>
                     <textarea
-                      className="min-h-[70px] w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
+                      className="min-h-[70px] w-full resize-y rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
                       value={pendingAnswers[index] || ''}
                       onChange={(event) =>
                         setPendingAnswers((prev) =>
@@ -222,7 +222,7 @@ export function AiAnswerGenerator({
                       key={option.title}
                       type="button"
                       onClick={() => setSelectedFlowIndex(index)}
-                      className={`w-full rounded-xl border p-3 text-left transition ${
+                      className={`w-full rounded-md border p-3 text-left transition ${
                         selectedFlowIndex === index
                           ? 'border-neutral-950 bg-neutral-50'
                           : 'border-neutral-200 bg-white hover:border-neutral-400'
@@ -264,7 +264,7 @@ export function AiAnswerGenerator({
                   질문을 하고, 충분하면 몇 가지 구성 흐름을 제안합니다.
                 </p>
                 <textarea
-                  className="min-h-[140px] w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-400"
+                  className="min-h-[140px] w-full resize-y rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-400"
                   value={outline}
                   onChange={(event) => setOutline(event.target.value)}
                   placeholder="예) 상황 → 내가 시도한 방법 → 결과 → 이 경험이 지원 직무와 연결되는 지점"
@@ -285,7 +285,7 @@ export function AiAnswerGenerator({
       ) : null}
 
       {result ? (
-        <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-4">
+        <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-violet-800">
               AI 초안 · {result.charCount}자 / {result.byteCount}byte

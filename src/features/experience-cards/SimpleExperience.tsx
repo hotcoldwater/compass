@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { deleteExperienceCard, listExperienceCards, loadExperienceCard, saveExperienceCard } from './api';
 import type { ExperienceCardDetail } from './types';
 import { AiAnalyzeExperience } from './AiAnalyzeExperience';
+import { CategoryBadge, StatusBadge } from './badges';
 
 const categories = ['프로젝트', '학업', '동아리', '대외활동', '인턴', '업무', '기타'];
 const empty = (): ExperienceCardDetail => ({ card: { id: 0, category: '프로젝트', title: '', organization: '', role: '', start_date: '', end_date: '', is_ongoing: false, raw_note: '', situation: '', task: '', actions: [], result: '', learning: '', summary: '', tags: [], status: 'memo', created_at: '', updated_at: '' }, metrics: [], competencies: [], storyAngles: [], usageHistory: [] });
@@ -15,7 +16,119 @@ export function SimpleExperience({ enabled }: { enabled: boolean }) {
   async function save(event: FormEvent) { event.preventDefault(); if (!detail) return; setSaving(true); try { const saved = await saveExperienceCard({ ...detail.card, metrics: detail.metrics, competencies: detail.competencies, storyAngles: detail.storyAngles }); setDetail(saved); setMessage('저장되었습니다.'); await refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : '저장하지 못했습니다.'); } finally { setSaving(false); } }
   function update(key: string, value: unknown) { if (detail) setDetail({ ...detail, card: { ...detail.card, [key]: value } }); }
   async function remove() { if (!detail?.card.id) return; if (!window.confirm('이 경험을 삭제하시겠습니까? 되돌릴 수 없습니다.')) return; setDeleting(true); try { await deleteExperienceCard(detail.card.id); setDetail(null); await refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : '삭제하지 못했습니다.'); } finally { setDeleting(false); } }
-  if (detail) return <section className="mx-auto max-w-3xl"><button type="button" onClick={()=>setDetail(null)} className="mb-5 text-sm text-neutral-500">← 경험 목록</button><form onSubmit={save} className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8"><div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-semibold tracking-tight">{detail.card.id ? '경험 수정' : '새 경험'}</h1><p className="mt-2 text-sm text-neutral-500">우선 기억나는 사실만 편하게 적어보세요.</p></div><div className="flex gap-2">{detail.card.id ? <button type="button" onClick={()=>void remove()} disabled={deleting} className="rounded-xl border border-red-200 px-4 py-3 text-sm font-medium text-red-700 disabled:opacity-50">{deleting ? '삭제 중...' : '삭제'}</button> : null}<button disabled={saving || !enabled} className="rounded-xl bg-neutral-950 px-4 py-3 text-sm font-medium text-white disabled:bg-neutral-300">{saving ? '저장 중...' : '저장하기'}</button></div></div>{message ? <p className="mt-4 text-sm text-neutral-600">{message}</p> : null}<div className="mt-8 space-y-5"><label className="block text-sm font-medium">경험 제목<input required value={detail.card.title} onChange={(e)=>update('title',e.target.value)} placeholder="예: 기업별 계정명 표준화" className="mt-2 w-full rounded-xl border border-neutral-200 px-4 py-3 font-normal"/></label><label className="block text-sm font-medium">카테고리<select value={detail.card.category} onChange={(e)=>update('category',e.target.value)} className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 font-normal">{categories.map((category)=><option key={category}>{category}</option>)}</select></label><label className="block text-sm font-medium">기억나는 내용을 자유롭게 적어주세요<textarea required value={detail.card.raw_note || ''} onChange={(e)=>update('raw_note',e.target.value)} placeholder="당시 어떤 문제가 있었고, 무엇을 했으며, 어떤 결과가 있었는지 자유롭게 적어주세요." className="mt-2 min-h-64 w-full rounded-xl border border-neutral-200 px-4 py-3 font-normal leading-7"/></label></div>{detail.card.id ? <><AiAnalyzeExperience cardId={detail.card.id} disabled={!enabled} onEnriched={(rawNote)=>update('raw_note',rawNote)} /><details className="mt-5 rounded-2xl bg-neutral-50 p-4"><summary className="cursor-pointer text-sm font-medium">직접 더 정리하기</summary><div className="mt-5 space-y-4"><Text label="상황" value={detail.card.situation || ''} onChange={(value)=>update('situation',value)}/><Text label="과제" value={detail.card.task || ''} onChange={(value)=>update('task',value)}/><Text label="결과" value={detail.card.result || ''} onChange={(value)=>update('result',value)}/><Text label="배운 점" value={detail.card.learning || ''} onChange={(value)=>update('learning',value)}/></div></details></> : null}</form></section>;
-  return <section className="mx-auto max-w-5xl"><div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-tight">경험</h1><p className="mt-2 text-sm text-neutral-500">경험을 기록하고, 자소서에 꺼내 쓰세요.</p></div><button type="button" disabled={!enabled} onClick={()=>{setDetail(empty());setMessage('');}} className="rounded-xl bg-neutral-950 px-4 py-3 text-sm font-medium text-white disabled:bg-neutral-300">+ 새 경험</button></div><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="경험 검색" className="mt-8 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 outline-none"/>{message ? <p className="mt-4 text-sm text-neutral-600">{message}</p> : null}<div className="mt-5 space-y-3">{loading?<p className="text-sm text-neutral-500">불러오는 중...</p>:visible.length?visible.map((item)=><button type="button" key={item.id} onClick={()=>void open(item.id)} className="w-full rounded-2xl border border-neutral-200 bg-white p-5 text-left transition hover:border-neutral-400"><div className="flex items-center justify-between gap-3"><h2 className="font-medium">{item.title}</h2><span className="text-xs text-neutral-400">{item.category}</span></div><p className="mt-2 line-clamp-2 text-sm leading-6 text-neutral-500">{item.summary || item.raw_note || '아직 작성한 내용이 없습니다.'}</p><p className="mt-3 text-xs text-neutral-400">최근 수정 {new Date(item.updated_at).toLocaleDateString('ko-KR')}</p></button>):<div className="rounded-2xl border border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">{enabled?'아직 기록한 경험이 없습니다. 첫 경험을 적어보세요.':'로그인 후 경험을 기록할 수 있습니다.'}</div>}</div></section>;
+  if (detail) return (
+    <section className="mx-auto max-w-3xl">
+      <button type="button" onClick={() => setDetail(null)} className="mb-5 text-sm text-neutral-500">← 경험 목록</button>
+      <form onSubmit={save} className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight">{detail.card.id ? '경험 수정' : '새 경험'}</h1>
+              {detail.card.id ? <StatusBadge status={detail.card.status} /> : null}
+            </div>
+            <p className="mt-2 text-sm text-neutral-500">우선 기억나는 사실만 편하게 적어보세요.</p>
+          </div>
+          <div className="flex gap-2">
+            {detail.card.id ? (
+              <button type="button" onClick={() => void remove()} disabled={deleting} className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 disabled:opacity-50">
+                {deleting ? '삭제 중...' : '삭제'}
+              </button>
+            ) : null}
+            <button disabled={saving || !enabled} className="rounded-md bg-neutral-950 px-3 py-2 text-sm font-medium text-white disabled:bg-neutral-300">
+              {saving ? '저장 중...' : '저장하기'}
+            </button>
+          </div>
+        </div>
+        {message ? <p className="mt-4 text-sm text-neutral-600">{message}</p> : null}
+        <div className="mt-8 space-y-5">
+          <label className="block text-sm font-medium">경험 제목
+            <input required value={detail.card.title} onChange={(e) => update('title', e.target.value)} placeholder="예: 기업별 계정명 표준화" className="mt-2 w-full rounded-md border border-neutral-200 px-3 py-2 font-normal" />
+          </label>
+          <label className="block text-sm font-medium">카테고리
+            <select value={detail.card.category} onChange={(e) => update('category', e.target.value)} className="mt-2 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 font-normal">
+              {categories.map((category) => <option key={category}>{category}</option>)}
+            </select>
+          </label>
+          <label className="block text-sm font-medium">기억나는 내용을 자유롭게 적어주세요
+            <textarea required value={detail.card.raw_note || ''} onChange={(e) => update('raw_note', e.target.value)} placeholder="당시 어떤 문제가 있었고, 무엇을 했으며, 어떤 결과가 있었는지 자유롭게 적어주세요." className="mt-2 min-h-64 w-full rounded-md border border-neutral-200 px-3 py-3 font-normal leading-7" />
+          </label>
+        </div>
+        {detail.card.id ? (
+          <>
+            <AiAnalyzeExperience cardId={detail.card.id} disabled={!enabled} onEnriched={(rawNote) => update('raw_note', rawNote)} />
+            <details className="mt-5 rounded-lg bg-neutral-50 p-4">
+              <summary className="cursor-pointer text-sm font-medium">직접 더 정리하기</summary>
+              <div className="mt-5 space-y-4">
+                <Text label="상황" value={detail.card.situation || ''} onChange={(value) => update('situation', value)} />
+                <Text label="과제" value={detail.card.task || ''} onChange={(value) => update('task', value)} />
+                <Text label="결과" value={detail.card.result || ''} onChange={(value) => update('result', value)} />
+                <Text label="배운 점" value={detail.card.learning || ''} onChange={(value) => update('learning', value)} />
+              </div>
+            </details>
+          </>
+        ) : null}
+      </form>
+    </section>
+  );
+  return (
+    <section className="mx-auto max-w-6xl">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">경험</h1>
+          <p className="mt-2 text-sm text-neutral-500">경험을 기록하고, 자소서에 꺼내 쓰세요.</p>
+        </div>
+        <button type="button" disabled={!enabled} onClick={() => { setDetail(empty()); setMessage(''); }} className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:bg-neutral-300">+ 새 경험</button>
+      </div>
+      <div className="mt-8 flex items-center gap-3">
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="경험 검색" className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm outline-none" />
+        <span className="shrink-0 text-xs text-neutral-400">{visible.length}개</span>
+      </div>
+      {message ? <p className="mt-4 text-sm text-neutral-600">{message}</p> : null}
+      <div className="mt-5">
+        {loading ? (
+          <p className="text-sm text-neutral-500">불러오는 중...</p>
+        ) : visible.length ? (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {visible.map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => void open(item.id)}
+                className={`group flex h-full flex-col gap-2 rounded-lg border border-neutral-200 bg-white p-4 text-left transition hover:border-neutral-300 hover:shadow-sm ${item.status === 'archived' ? 'opacity-70' : ''}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <CategoryBadge category={item.category} />
+                  <StatusBadge status={item.status} />
+                </div>
+                <div>
+                  <h2 className="truncate text-[15px] font-medium text-neutral-900">{item.title || '제목 없음'}</h2>
+                  {(item.organization || item.role) ? (
+                    <p className="mt-0.5 truncate text-xs text-neutral-500">{[item.organization, item.role].filter(Boolean).join(' · ')}</p>
+                  ) : null}
+                </div>
+                <p className="line-clamp-2 text-sm leading-5 text-neutral-500">{item.summary || item.raw_note || '아직 작성한 내용이 없습니다.'}</p>
+                {item.tags?.length ? (
+                  <div className="flex flex-wrap gap-1">
+                    {item.tags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[11px] text-neutral-500">#{tag}</span>
+                    ))}
+                    {item.tags.length > 3 ? <span className="text-[11px] text-neutral-400">+{item.tags.length - 3}</span> : null}
+                  </div>
+                ) : null}
+                <div className="mt-auto flex items-center justify-between border-t border-neutral-100 pt-2 text-[11px] text-neutral-400">
+                  <span>지표 {item.confirmed_metric_count ?? 0} · 스토리 {item.story_count ?? 0}</span>
+                  <time>{new Date(item.updated_at).toLocaleDateString('ko-KR')}</time>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">
+            {enabled ? '아직 기록한 경험이 없습니다. 첫 경험을 적어보세요.' : '로그인 후 경험을 기록할 수 있습니다.'}
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
-function Text({label,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}) { return <label className="block text-sm font-medium">{label}<textarea value={value} onChange={(e)=>onChange(e.target.value)} className="mt-2 min-h-28 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 font-normal leading-6"/></label>; }
+function Text({label,value,onChange}:{label:string;value:string;onChange:(value:string)=>void}) { return <label className="block text-sm font-medium">{label}<textarea value={value} onChange={(e)=>onChange(e.target.value)} className="mt-2 min-h-28 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 font-normal leading-6"/></label>; }

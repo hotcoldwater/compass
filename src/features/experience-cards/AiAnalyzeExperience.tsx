@@ -104,16 +104,16 @@ export function AiAnalyzeExperience({
           type="button"
           onClick={openModal}
           disabled={disabled || finishing}
-          className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-medium text-violet-800 disabled:opacity-50"
+          className="rounded-md border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-medium text-violet-800 disabled:opacity-50"
         >
           {finishing ? 'AI가 반영하는 중...' : 'AI 분석'}
         </button>
       </div>
-      {message ? <p className="mt-3 rounded-xl bg-neutral-50 px-3 py-2 text-sm text-neutral-600">{message}</p> : null}
+      {message ? <p className="mt-3 rounded-md bg-neutral-50 px-3 py-2 text-sm text-neutral-600">{message}</p> : null}
 
       {modalOpen ? (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-neutral-900">AI 분석</h3>
               <button type="button" onClick={() => setModalOpen(false)} className="text-xs text-neutral-400">
@@ -138,7 +138,7 @@ export function AiAnalyzeExperience({
               <div className="space-y-3">
                 <p className="text-sm font-medium text-neutral-800">{currentQuestion}</p>
                 <textarea
-                  className="min-h-[100px] w-full resize-y rounded-xl border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-400"
+                  className="min-h-[100px] w-full resize-y rounded-md border border-neutral-200 bg-white px-3 py-3 text-sm outline-none transition focus:border-neutral-400"
                   value={currentAnswer}
                   onChange={(event) => setCurrentAnswer(event.target.value)}
                   placeholder="답변을 적어주세요."
