@@ -57,7 +57,6 @@ export type ResumePayloadQuestion = {
 
 export type ResumePayload = {
   company_name: string;
-  company_id: number | null;
   application_start_date: string;
   application_end_date: string;
   job_field: string;

@@ -18,39 +18,13 @@ import { SimpleExperience } from './features/experience-cards/SimpleExperience';
 import { ResumeExperienceLinks } from './features/resumes/ResumeExperienceLinks';
 import { AiAnswerGenerator } from './features/resumes/AiAnswerGenerator';
 import { CompanyArchive } from './features/companies/CompanyArchive';
-import { listCompanies } from './features/companies/api';
-import type { Company } from './features/companies/types';
+import { FirmField, JobFieldField } from './features/resumes/FirmFields';
+import { LIMIT_OPTIONS } from './features/resumes/limitOptions';
+import { NewResumeWizard } from './features/resumes/NewResumeWizard';
 
 const STEP_ITEMS = [
   { id: 1, label: '회사와 문항' },
   { id: 2, label: '답변 작성' },
-] as const;
-const LIMIT_OPTIONS: Array<{ value: ResumeLimitType; label: string }> = [
-  { value: 'chars', label: '글자수' },
-  { value: 'bytes', label: 'byte' },
-  { value: 'none', label: '제한없음' },
-];
-const EXAMPLE_QUESTIONS = [
-  {
-    label: '지원 동기',
-    text: '지원한 회사와 직무에 관심을 갖게 된 계기와, 이를 위해 준비한 경험을 구체적으로 기술해 주십시오.',
-  },
-  {
-    label: '직무 역량',
-    text: '지원 직무를 수행하는 데 필요한 역량은 무엇이라고 생각하며, 이를 보여주는 본인의 경험과 기여를 설명해 주십시오.',
-  },
-  {
-    label: '문제 해결',
-    text: '목표를 달성하는 과정에서 예상하지 못한 문제를 발견하고 해결한 경험을 상황, 행동, 결과 중심으로 기술해 주십시오.',
-  },
-  {
-    label: '협업',
-    text: '다른 사람과 협업하며 서로 다른 의견을 조율하고 공동의 성과를 만든 경험을 본인의 역할 중심으로 기술해 주십시오.',
-  },
-  {
-    label: '실패와 개선',
-    text: '실패하거나 기대에 미치지 못한 결과를 개선한 경험과, 그 과정에서 배운 점을 구체적으로 기술해 주십시오.',
-  },
 ] as const;
 
 type PrimarySection = '새 자소서' | '경험 아카이브' | '기업정보';
@@ -69,7 +43,6 @@ type DraftQuestion = {
 type ResumeDraft = {
   id: number | null;
   company_name: string;
-  company_id: number | null;
   application_start_date: string;
   application_end_date: string;
   job_field: string;
@@ -111,7 +84,6 @@ function createEmptyResumeDraft(): ResumeDraft {
   return {
     id: null,
     company_name: '',
-    company_id: null,
     application_start_date: '',
     application_end_date: '',
     job_field: '',
@@ -123,7 +95,6 @@ function mapRecordToDraft(record: ResumeRecord): ResumeDraft {
   return {
     id: record.id,
     company_name: record.company_name || '',
-    company_id: record.company_id ?? null,
     application_start_date: record.application_start_date || '',
     application_end_date: record.application_end_date || '',
     job_field: record.job_field || '',
@@ -146,7 +117,6 @@ function mapRecordToDraft(record: ResumeRecord): ResumeDraft {
 function buildResumePayload(draft: ResumeDraft): ResumePayload {
   return {
     company_name: draft.company_name.trim(),
-    company_id: draft.company_id,
     application_start_date: draft.application_start_date.trim(),
     application_end_date: draft.application_end_date.trim(),
     job_field: draft.job_field.trim(),
@@ -202,8 +172,8 @@ export default function App() {
     createEmptyResumeDraft()
   );
   const [resumeRecords, setResumeRecords] = useState<ResumeRecord[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
+  const [isNewResumeWizardOpen, setIsNewResumeWizardOpen] = useState(false);
   const [isSavingResume, setIsSavingResume] = useState(false);
   const [resumeMessage, setResumeMessage] = useState('');
   const [resumeError, setResumeError] = useState('');
@@ -250,7 +220,6 @@ export default function App() {
     async function loadData() {
       if (!session?.user.id) {
         setResumeRecords([]);
-        setCompanies([]);
         setIsLoadingResumes(false);
         return;
       }
@@ -258,14 +227,10 @@ export default function App() {
       setIsLoadingResumes(true);
 
       try {
-        const [resumeRows, companyList] = await Promise.all([
-          fetchResumes(),
-          listCompanies(),
-        ]);
+        const resumeRows = await fetchResumes();
 
         if (isMounted) {
           setResumeRecords(resumeRows);
-          setCompanies(companyList.items);
         }
       } catch (loadError) {
         if (isMounted) {
@@ -291,22 +256,11 @@ export default function App() {
 
   const canOpenStepTwo = hasCompleteBasicInfo(resumeDraft);
 
-  async function refreshCompanies() {
-    if (!session?.user.id) return;
-    try {
-      setCompanies((await listCompanies()).items);
-    } catch {
-      // 목록이 갱신되지 않아도 기존 선택은 그대로 유지되므로 조용히 무시
-    }
-  }
-
   function openNewResume() {
     setActiveSection('새 자소서');
-    setActiveStep(1);
-    setResumeDraft(createEmptyResumeDraft());
     setResumeMessage('');
     setResumeError('');
-    void refreshCompanies();
+    setIsNewResumeWizardOpen(true);
   }
 
   function syncResumeRecord(savedRecord: ResumeRecord) {
@@ -370,7 +324,6 @@ export default function App() {
     setActiveStep(hasCompleteBasicInfo(draft) ? 2 : 1);
     setResumeMessage('');
     setResumeError('');
-    void refreshCompanies();
   }
 
   async function removeResume(id: number) {
@@ -435,19 +388,6 @@ export default function App() {
     }));
   }
 
-  function addExampleQuestion(questionText: string) {
-    setResumeDraft((prev) => ({
-      ...prev,
-      questions: [
-        ...prev.questions.filter((question) => question.question_text.trim() !== ''),
-        {
-          ...createQuestion(prev.questions.length),
-          question_text: questionText,
-        },
-      ],
-    }));
-  }
-
   function removeQuestion(clientId: string) {
     setResumeDraft((prev) => ({
       ...prev,
@@ -493,59 +433,12 @@ export default function App() {
           회사명, 지원 분야, 첫 문항만 입력하면 바로 작성할 수 있습니다.
         </p>
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <label
-              htmlFor="companyName"
-              className="text-sm font-medium text-neutral-700"
-            >
-              법인명
-            </label>
-            <input
-              id="companyName"
-              className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400"
-              value={resumeDraft.company_name}
-              onChange={(event) =>
-                updateDraftField('company_name', event.target.value)
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="jobField"
-              className="text-sm font-medium text-neutral-700"
-            >
-              지원분야
-            </label>
-            <input
-              id="jobField"
-              className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400"
-              value={resumeDraft.job_field}
-              onChange={(event) =>
-                updateDraftField('job_field', event.target.value)
-              }
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="companySelect" className="text-sm font-medium text-neutral-700">
-            지원 기업 (선택)
-          </label>
-          <select
-            id="companySelect"
-            className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400"
-            value={resumeDraft.company_id ?? ''}
-            onChange={(event) =>
-              updateDraftField('company_id', event.target.value ? Number(event.target.value) : null)
-            }
-          >
-            <option value="">선택 안 함</option>
-            {companies.map((company) => (
-              <option key={company.id} value={company.id}>{company.name}</option>
-            ))}
-          </select>
-          <p className="text-xs text-neutral-500">기업정보 탭에 미리 정리해둔 기업을 선택하면, AI 초안 생성 시 그 기업 정보를 지원동기 등에 활용합니다.</p>
+          <FirmField value={resumeDraft.company_name} onChange={(value) => updateDraftField('company_name', value)} />
+          <JobFieldField
+            firmName={resumeDraft.company_name}
+            value={resumeDraft.job_field}
+            onChange={(value) => updateDraftField('job_field', value)}
+          />
         </div>
 
         <details className="rounded-lg border border-neutral-200 bg-white p-4">
@@ -572,27 +465,6 @@ export default function App() {
             >
               문항 추가
             </button>
-          </div>
-
-          <div className="rounded-lg border border-neutral-200 bg-white p-4">
-            <div className="text-sm font-medium text-neutral-700">
-              경험카드 활용 문항 예시
-            </div>
-            <p className="mt-1 text-xs leading-5 text-neutral-500">
-              예시를 추가한 뒤, 작성 단계에서 경험카드와 스토리 각도를 연결해 보세요.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {EXAMPLE_QUESTIONS.map((example) => (
-                <button
-                  key={example.label}
-                  type="button"
-                  onClick={() => addExampleQuestion(example.text)}
-                  className="rounded-md border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-700 transition hover:border-neutral-400"
-                >
-                  + {example.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div className="space-y-4">
@@ -826,10 +698,16 @@ export default function App() {
             ))}
           </div>
         ) : null}
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-[#f7f7f8] shadow-sm">
-        {renderResumeStepNavigation()}
-        {activeStep === 1 ? renderResumeBasicInfo() : renderResumeWriting()}
-        </div>
+        {resumeDraft.id !== null ? (
+          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-[#f7f7f8] shadow-sm">
+            {renderResumeStepNavigation()}
+            {activeStep === 1 ? renderResumeBasicInfo() : renderResumeWriting()}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">
+            목록에서 자소서를 선택하거나, "+ 새 자소서"로 새로 시작하세요.
+          </div>
+        )}
       </section>
     );
   }
@@ -915,6 +793,16 @@ export default function App() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-5 py-10 sm:px-8">{renderMainContent()}</main>
+      {isNewResumeWizardOpen ? (
+        <NewResumeWizard
+          onClose={() => setIsNewResumeWizardOpen(false)}
+          onCreated={(record) => {
+            syncResumeRecord(record);
+            setActiveStep(2);
+            setIsNewResumeWizardOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 

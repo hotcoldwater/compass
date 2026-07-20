@@ -48,3 +48,17 @@ export async function deleteCompany(env: AuthEnv, user: AuthenticatedUser, id: n
   const deleted = await sql`DELETE FROM companies WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
   return deleted.length > 0;
 }
+
+export async function findOrCreateCompanyByName(
+  env: Pick<AuthEnv, 'DATABASE_URL'>,
+  user: AuthenticatedUser,
+  name: string
+): Promise<number | null> {
+  const trimmed = text(name);
+  if (!trimmed) return null;
+  const sql = neon(env.DATABASE_URL);
+  const existing = await sql`SELECT id FROM companies WHERE user_id=${user.id} AND name=${trimmed} LIMIT 1`;
+  if (existing.length) return Number(existing[0].id);
+  const inserted = await sql`INSERT INTO companies (user_id, name) VALUES (${user.id}, ${trimmed}) RETURNING id`;
+  return Number(inserted[0].id);
+}

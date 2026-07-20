@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import type { AuthenticatedUser, AuthEnv } from './auth';
-import { ensureCompanyTables } from './companies';
+import { ensureCompanyTables, findOrCreateCompanyByName } from './companies';
 
 type Env = Pick<AuthEnv, 'DATABASE_URL'>;
 
@@ -40,7 +40,6 @@ export type ResumePayloadQuestion = {
 
 export type ResumePayload = {
   company_name?: string;
-  company_id?: number | null;
   application_start_date?: string;
   application_end_date?: string;
   job_field?: string;
@@ -126,10 +125,6 @@ function normalizeNullableText(value: string | undefined) {
   return trimmed || null;
 }
 
-function normalizeCompanyId(value: number | null | undefined) {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
-}
-
 function normalizeQuestion(question: ResumePayloadQuestion, index: number) {
   const rawLimitType = question.limit_type;
   const limitType =
@@ -160,7 +155,6 @@ function normalizeQuestion(question: ResumePayloadQuestion, index: number) {
 export function normalizeResumePayload(body: Partial<ResumePayload>) {
   return {
     company_name: normalizeNullableText(body.company_name),
-    company_id: normalizeCompanyId(body.company_id),
     application_start_date: normalizeDate(body.application_start_date),
     application_end_date: normalizeDate(body.application_end_date),
     job_field: normalizeNullableText(body.job_field),
@@ -240,6 +234,7 @@ export async function createResumeRecord(
 ): Promise<ResumeRecord> {
   const sql = neon(env.DATABASE_URL);
   const normalized = normalizeResumePayload(body);
+  const companyId = await findOrCreateCompanyByName(env, user, normalized.company_name || '');
 
   const insertedRows = (await sql`
     INSERT INTO resumes (
@@ -253,7 +248,7 @@ export async function createResumeRecord(
     VALUES (
       ${user.id},
       ${normalized.company_name},
-      ${normalized.company_id},
+      ${companyId},
       ${normalized.application_start_date},
       ${normalized.application_end_date},
       ${normalized.job_field}
@@ -306,6 +301,7 @@ export async function updateResumeRecord(
 ): Promise<ResumeRecord | null> {
   const sql = neon(env.DATABASE_URL);
   const normalized = normalizeResumePayload(body);
+  const companyId = await findOrCreateCompanyByName(env, user, normalized.company_name || '');
 
   const existing = (await sql`
     SELECT
@@ -331,7 +327,7 @@ export async function updateResumeRecord(
     UPDATE resumes
     SET
       company_name = ${normalized.company_name},
-      company_id = ${normalized.company_id},
+      company_id = ${companyId},
       application_start_date = ${normalized.application_start_date},
       application_end_date = ${normalized.application_end_date},
       job_field = ${normalized.job_field},
