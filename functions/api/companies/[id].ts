@@ -1,0 +1,10 @@
+import { getAuthenticatedUser, type AuthEnv } from '../../_lib/auth';
+import { companyJson, deleteCompany, ensureCompanyTables, getCompany, saveCompany } from '../../_lib/companies';
+
+const idOf = (value: string | string[] | undefined) => Number(Array.isArray(value) ? value[0] : value);
+
+export const onRequestGet: PagesFunction<AuthEnv> = async ({ request, env, params }) => { const user = await getAuthenticatedUser(request, env); const id = idOf(params.id); if (!user) return companyJson({ ok: false, error: '로그인이 필요합니다.' }, 401); if (!Number.isInteger(id)) return companyJson({ ok: false, error: '잘못된 기업 ID입니다.' }, 400); await ensureCompanyTables(env); const data = await getCompany(env, user, id); return data ? companyJson({ ok: true, data }) : companyJson({ ok: false, error: '기업정보를 찾을 수 없습니다.' }, 404); };
+
+export const onRequestPut: PagesFunction<AuthEnv> = async ({ request, env, params }) => { try { const user = await getAuthenticatedUser(request, env); const id = idOf(params.id); if (!user) return companyJson({ ok: false, error: '로그인이 필요합니다.' }, 401); if (!Number.isInteger(id)) return companyJson({ ok: false, error: '잘못된 기업 ID입니다.' }, 400); await ensureCompanyTables(env); const data = await saveCompany(env, user, await request.json() as Record<string, unknown>, id); return data ? companyJson({ ok: true, data }) : companyJson({ ok: false, error: '기업정보를 찾을 수 없습니다.' }, 404); } catch (error) { return companyJson({ ok: false, error: error instanceof Error ? error.message : '기업정보 저장에 실패했습니다.' }, 400); } };
+
+export const onRequestDelete: PagesFunction<AuthEnv> = async ({ request, env, params }) => { const user = await getAuthenticatedUser(request, env); const id = idOf(params.id); if (!user) return companyJson({ ok: false, error: '로그인이 필요합니다.' }, 401); if (!Number.isInteger(id)) return companyJson({ ok: false, error: '잘못된 기업 ID입니다.' }, 400); await ensureCompanyTables(env); const deleted = await deleteCompany(env, user, id); return deleted ? companyJson({ ok: true }) : companyJson({ ok: false, error: '기업정보를 찾을 수 없습니다.' }, 404); };

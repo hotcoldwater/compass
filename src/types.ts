@@ -37,6 +37,7 @@ export type ResumeQuestion = {
 export type ResumeRecord = {
   id: number;
   company_name: string | null;
+  company_id: number | null;
   application_start_date: string | null;
   application_end_date: string | null;
   job_field: string | null;
@@ -56,6 +57,7 @@ export type ResumePayloadQuestion = {
 
 export type ResumePayload = {
   company_name: string;
+  company_id: number | null;
   application_start_date: string;
   application_end_date: string;
   job_field: string;

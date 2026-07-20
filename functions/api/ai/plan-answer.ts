@@ -18,25 +18,24 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     const user = await getAuthenticatedUser(request, env);
     if (!user) return cardJson({ ok: false, error: '로그인이 필요합니다.' }, 401);
 
-    const body = (await request.json()) as { resumeQuestionId?: unknown; outline?: unknown; companyInfo?: unknown; followups?: unknown };
+    const body = (await request.json()) as { resumeQuestionId?: unknown; outline?: unknown; followups?: unknown };
     const questionId = Number(body.resumeQuestionId);
     if (!Number.isInteger(questionId)) return cardJson({ ok: false, error: '저장된 자소서 문항에서만 AI 작성을 사용할 수 있습니다.' }, 400);
 
     const outline = String(body.outline || '').trim();
     if (!outline) return cardJson({ ok: false, error: '답변 흐름을 먼저 입력해주세요.' }, 400);
-    const companyInfo = String(body.companyInfo || '').trim();
     const followups = normalizeFollowups(body.followups);
 
     const context = await loadAnswerContext(env, user, questionId);
     if (!context.ok) return cardJson({ ok: false, error: context.error }, context.status);
-    const { question, facts, confirmedMetrics } = context.data;
+    const { question, facts, confirmedMetrics, companyInfo } = context.data;
 
     const plan = await planAnswer(env, {
       companyName: question.company_name || '',
       jobField: question.job_field || '',
       question: question.question_text,
       outline,
-      companyInfo: companyInfo || question.company_info || '',
+      companyInfo,
       selectedFacts: facts,
       confirmedMetrics,
       previousFollowups: followups,

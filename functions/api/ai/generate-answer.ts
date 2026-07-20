@@ -23,14 +23,12 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     const body = (await request.json()) as {
       resumeQuestionId?: unknown;
       outline?: unknown;
-      companyInfo?: unknown;
       followups?: unknown;
       selectedFlow?: unknown;
     };
     const questionId = Number(body.resumeQuestionId);
     if (!Number.isInteger(questionId)) return cardJson({ ok: false, error: '저장된 자소서 문항에서만 AI 작성을 사용할 수 있습니다.' }, 400);
     const outline = String(body.outline || '').trim();
-    const companyInfo = String(body.companyInfo || '').trim();
     const followups = normalizeFollowups(body.followups);
     const rawFlow = body.selectedFlow && typeof body.selectedFlow === 'object' ? (body.selectedFlow as Record<string, unknown>) : null;
     const selectedFlow = rawFlow && Array.isArray(rawFlow.bullets) && rawFlow.bullets.length
@@ -42,7 +40,7 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
 
     const context = await loadAnswerContext(env, user, questionId);
     if (!context.ok) return cardJson({ ok: false, error: context.error }, context.status);
-    const { question, facts, confirmedMetrics, primaryExperienceCardId } = context.data;
+    const { question, facts, confirmedMetrics, primaryExperienceCardId, companyInfo } = context.data;
 
     const isHashtagQuestion = /해시태그|#\s*[^\s]+\s*,?\s*#/.test(question.question_text);
 
@@ -54,7 +52,7 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
       selectedFacts: facts,
       confirmedMetrics,
       outline: outline || undefined,
-      companyInfo: companyInfo || question.company_info || undefined,
+      companyInfo: companyInfo || undefined,
       additionalDetails: followups.length ? followups : undefined,
       flow: selectedFlow,
     };
@@ -85,9 +83,6 @@ export const onRequestPost: PagesFunction<AiEnv> = async ({ request, env }) => {
     const versionNumber = Number((versions[0] as { latest: number }).latest) + 1;
     const inserted = await sql`INSERT INTO resume_answer_versions (resume_question_id,version_number,content,source,generation_metadata) VALUES (${questionId},${versionNumber},${generation.answer},'ai_generated',${JSON.stringify({ usedFacts: generation.usedFacts, warnings: generation.warnings, outline, followups, selectedFlow })}::jsonb) RETURNING id`;
 
-    if (companyInfo) {
-      await sql`UPDATE resume_questions SET company_info=${companyInfo} WHERE id=${questionId}`;
-    }
     if (followups.length && primaryExperienceCardId) {
       const addition = followups.map((item) => `Q. ${item.question}\nA. ${item.answer}`).join('\n\n');
       await sql`UPDATE experience_cards SET raw_note = raw_note || ${`\n\n[자소서 추가 질문 답변]\n${addition}`}, updated_at = NOW() WHERE id=${primaryExperienceCardId} AND user_id=${user.id}`;

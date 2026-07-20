@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import type { AuthenticatedUser, AuthEnv } from './auth';
+import { ensureCompanyTables } from './companies';
 
 type Env = Pick<AuthEnv, 'DATABASE_URL'>;
 
@@ -16,6 +17,7 @@ export type ResumeQuestionRow = {
 export type ResumeRow = {
   id: number;
   company_name: string | null;
+  company_id: number | null;
   application_start_date: string | null;
   application_end_date: string | null;
   job_field: string | null;
@@ -38,6 +40,7 @@ export type ResumePayloadQuestion = {
 
 export type ResumePayload = {
   company_name?: string;
+  company_id?: number | null;
   application_start_date?: string;
   application_end_date?: string;
   job_field?: string;
@@ -72,6 +75,13 @@ export async function ensureResumeTables(env: Env) {
   await sql`
     ALTER TABLE resumes
     ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
+  `;
+
+  await ensureCompanyTables(env);
+
+  await sql`
+    ALTER TABLE resumes
+    ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL
   `;
 
   await sql`
@@ -116,6 +126,10 @@ function normalizeNullableText(value: string | undefined) {
   return trimmed || null;
 }
 
+function normalizeCompanyId(value: number | null | undefined) {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
+}
+
 function normalizeQuestion(question: ResumePayloadQuestion, index: number) {
   const rawLimitType = question.limit_type;
   const limitType =
@@ -146,6 +160,7 @@ function normalizeQuestion(question: ResumePayloadQuestion, index: number) {
 export function normalizeResumePayload(body: Partial<ResumePayload>) {
   return {
     company_name: normalizeNullableText(body.company_name),
+    company_id: normalizeCompanyId(body.company_id),
     application_start_date: normalizeDate(body.application_start_date),
     application_end_date: normalizeDate(body.application_end_date),
     job_field: normalizeNullableText(body.job_field),
@@ -165,6 +180,7 @@ export async function loadResumeRecords(
     SELECT
       id,
       company_name,
+      company_id,
       application_start_date::text AS application_start_date,
       application_end_date::text AS application_end_date,
       job_field,
@@ -229,6 +245,7 @@ export async function createResumeRecord(
     INSERT INTO resumes (
       user_id,
       company_name,
+      company_id,
       application_start_date,
       application_end_date,
       job_field
@@ -236,6 +253,7 @@ export async function createResumeRecord(
     VALUES (
       ${user.id},
       ${normalized.company_name},
+      ${normalized.company_id},
       ${normalized.application_start_date},
       ${normalized.application_end_date},
       ${normalized.job_field}
@@ -243,6 +261,7 @@ export async function createResumeRecord(
     RETURNING
       id,
       company_name,
+      company_id,
       application_start_date::text AS application_start_date,
       application_end_date::text AS application_end_date,
       job_field,
@@ -292,6 +311,7 @@ export async function updateResumeRecord(
     SELECT
       id,
       company_name,
+      company_id,
       application_start_date::text AS application_start_date,
       application_end_date::text AS application_end_date,
       job_field,
@@ -311,6 +331,7 @@ export async function updateResumeRecord(
     UPDATE resumes
     SET
       company_name = ${normalized.company_name},
+      company_id = ${normalized.company_id},
       application_start_date = ${normalized.application_start_date},
       application_end_date = ${normalized.application_end_date},
       job_field = ${normalized.job_field},

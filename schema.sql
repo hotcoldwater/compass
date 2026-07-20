@@ -56,6 +56,17 @@ ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS experiences_user_id_created_at_idx
   ON experiences (user_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS companies (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  raw_note TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS companies_user_updated_idx ON companies (user_id, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS resumes (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -69,6 +80,9 @@ CREATE TABLE IF NOT EXISTS resumes (
 
 ALTER TABLE resumes
 ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+
+ALTER TABLE resumes
+ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS resumes_user_id_updated_at_idx
   ON resumes (user_id, updated_at DESC);

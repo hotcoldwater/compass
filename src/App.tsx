@@ -17,6 +17,9 @@ import type {
 import { SimpleExperience } from './features/experience-cards/SimpleExperience';
 import { ResumeExperienceLinks } from './features/resumes/ResumeExperienceLinks';
 import { AiAnswerGenerator } from './features/resumes/AiAnswerGenerator';
+import { CompanyArchive } from './features/companies/CompanyArchive';
+import { listCompanies } from './features/companies/api';
+import type { Company } from './features/companies/types';
 
 const STEP_ITEMS = [
   { id: 1, label: '회사와 문항' },
@@ -50,7 +53,7 @@ const EXAMPLE_QUESTIONS = [
   },
 ] as const;
 
-type PrimarySection = '새 자소서' | '경험 아카이브';
+type PrimarySection = '새 자소서' | '경험 아카이브' | '기업정보';
 type StepId = (typeof STEP_ITEMS)[number]['id'];
 
 type DraftQuestion = {
@@ -66,6 +69,7 @@ type DraftQuestion = {
 type ResumeDraft = {
   id: number | null;
   company_name: string;
+  company_id: number | null;
   application_start_date: string;
   application_end_date: string;
   job_field: string;
@@ -107,6 +111,7 @@ function createEmptyResumeDraft(): ResumeDraft {
   return {
     id: null,
     company_name: '',
+    company_id: null,
     application_start_date: '',
     application_end_date: '',
     job_field: '',
@@ -118,6 +123,7 @@ function mapRecordToDraft(record: ResumeRecord): ResumeDraft {
   return {
     id: record.id,
     company_name: record.company_name || '',
+    company_id: record.company_id ?? null,
     application_start_date: record.application_start_date || '',
     application_end_date: record.application_end_date || '',
     job_field: record.job_field || '',
@@ -140,6 +146,7 @@ function mapRecordToDraft(record: ResumeRecord): ResumeDraft {
 function buildResumePayload(draft: ResumeDraft): ResumePayload {
   return {
     company_name: draft.company_name.trim(),
+    company_id: draft.company_id,
     application_start_date: draft.application_start_date.trim(),
     application_end_date: draft.application_end_date.trim(),
     job_field: draft.job_field.trim(),
@@ -195,6 +202,7 @@ export default function App() {
     createEmptyResumeDraft()
   );
   const [resumeRecords, setResumeRecords] = useState<ResumeRecord[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [isSavingResume, setIsSavingResume] = useState(false);
   const [resumeMessage, setResumeMessage] = useState('');
@@ -242,6 +250,7 @@ export default function App() {
     async function loadData() {
       if (!session?.user.id) {
         setResumeRecords([]);
+        setCompanies([]);
         setIsLoadingResumes(false);
         return;
       }
@@ -249,10 +258,14 @@ export default function App() {
       setIsLoadingResumes(true);
 
       try {
-        const resumeRows = await fetchResumes();
+        const [resumeRows, companyList] = await Promise.all([
+          fetchResumes(),
+          listCompanies(),
+        ]);
 
         if (isMounted) {
           setResumeRecords(resumeRows);
+          setCompanies(companyList.items);
         }
       } catch (loadError) {
         if (isMounted) {
@@ -278,12 +291,22 @@ export default function App() {
 
   const canOpenStepTwo = hasCompleteBasicInfo(resumeDraft);
 
+  async function refreshCompanies() {
+    if (!session?.user.id) return;
+    try {
+      setCompanies((await listCompanies()).items);
+    } catch {
+      // 목록이 갱신되지 않아도 기존 선택은 그대로 유지되므로 조용히 무시
+    }
+  }
+
   function openNewResume() {
     setActiveSection('새 자소서');
     setActiveStep(1);
     setResumeDraft(createEmptyResumeDraft());
     setResumeMessage('');
     setResumeError('');
+    void refreshCompanies();
   }
 
   function syncResumeRecord(savedRecord: ResumeRecord) {
@@ -347,6 +370,7 @@ export default function App() {
     setActiveStep(hasCompleteBasicInfo(draft) ? 2 : 1);
     setResumeMessage('');
     setResumeError('');
+    void refreshCompanies();
   }
 
   async function removeResume(id: number) {
@@ -502,6 +526,26 @@ export default function App() {
               }
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="companySelect" className="text-sm font-medium text-neutral-700">
+            지원 기업 (선택)
+          </label>
+          <select
+            id="companySelect"
+            className="w-full rounded-md border border-neutral-200 bg-white px-3 py-2 outline-none transition focus:border-neutral-400"
+            value={resumeDraft.company_id ?? ''}
+            onChange={(event) =>
+              updateDraftField('company_id', event.target.value ? Number(event.target.value) : null)
+            }
+          >
+            <option value="">선택 안 함</option>
+            {companies.map((company) => (
+              <option key={company.id} value={company.id}>{company.name}</option>
+            ))}
+          </select>
+          <p className="text-xs text-neutral-500">기업정보 탭에 미리 정리해둔 기업을 선택하면, AI 초안 생성 시 그 기업 정보를 지원동기 등에 활용합니다.</p>
         </div>
 
         <details className="rounded-lg border border-neutral-200 bg-white p-4">
@@ -712,23 +756,9 @@ export default function App() {
                     questionId={question.id}
                     disabled={!session?.user.id}
                   />
-                  <div className="mt-3">
-                    <label className="text-xs font-medium text-neutral-600">
-                      기업 정보 (인재상·정책·신년사 등, 선택)
-                    </label>
-                    <textarea
-                      className="mt-2 min-h-[80px] w-full resize-y rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
-                      placeholder="지원동기 등 기업 연계형 문항에서 참고할 기업 정보를 붙여넣으세요."
-                      value={question.company_info}
-                      onChange={(event) =>
-                        updateQuestion(question.client_id, 'company_info', event.target.value)
-                      }
-                    />
-                  </div>
                   <AiAnswerGenerator
                     questionId={question.id}
                     disabled={!session?.user.id}
-                    companyInfo={question.company_info}
                     existingAnswer={question.answer_content}
                     onApply={(answer) =>
                       updateQuestion(question.client_id, 'answer_content', answer)
@@ -809,6 +839,10 @@ export default function App() {
       return <SimpleExperience enabled={Boolean(session?.user.id)} />;
     }
 
+    if (activeSection === '기업정보') {
+      return <CompanyArchive enabled={Boolean(session?.user.id)} />;
+    }
+
     return renderResumeSection();
   }
 
@@ -874,6 +908,7 @@ export default function App() {
           </button>
           <nav className="flex items-center gap-1 rounded-md bg-neutral-100 p-1">
             <button type="button" onClick={() => setActiveSection('경험 아카이브')} className={`rounded-md px-4 py-2 text-sm font-medium ${activeSection === '경험 아카이브' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>경험</button>
+            <button type="button" onClick={() => setActiveSection('기업정보')} className={`rounded-md px-4 py-2 text-sm font-medium ${activeSection === '기업정보' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>기업정보</button>
             <button type="button" onClick={() => setActiveSection('새 자소서')} className={`rounded-md px-4 py-2 text-sm font-medium ${activeSection === '새 자소서' ? 'bg-white shadow-sm' : 'text-neutral-500'}`}>자소서</button>
           </nav>
           {isSessionLoading ? <span className="text-xs text-neutral-400">불러오는 중</span> : session?.user ? <form method="post" action="/api/auth/signout?callbackUrl=/" className="hidden sm:block"><input type="hidden" name="csrfToken" value={csrfToken}/><button className="text-sm text-neutral-500">로그아웃</button></form> : <form method="post" action="/api/auth/signin/google?callbackUrl=/"><input type="hidden" name="csrfToken" value={csrfToken}/><button disabled={!csrfToken} className="rounded-md bg-neutral-950 px-3 py-2 text-xs font-medium text-white disabled:bg-neutral-300">로그인</button></form>}

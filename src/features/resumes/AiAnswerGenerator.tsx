@@ -19,13 +19,11 @@ type GenerateResponse = { ok: boolean; data?: GeneratedAnswer; error?: string };
 export function AiAnswerGenerator({
   questionId,
   disabled,
-  companyInfo,
   existingAnswer,
   onApply,
 }: {
   questionId?: number;
   disabled: boolean;
-  companyInfo: string;
   existingAnswer: string;
   onApply: (answer: string) => void;
 }) {
@@ -67,7 +65,7 @@ export function AiAnswerGenerator({
       const response = await fetch('/api/ai/plan-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeQuestionId: questionId, outline, companyInfo, followups: currentFollowups }),
+        body: JSON.stringify({ resumeQuestionId: questionId, outline, followups: currentFollowups }),
       });
       const body = (await response.json()) as PlanResponse;
       if (!response.ok || !body.ok || !body.data) throw new Error(body.error || '답변 흐름을 점검하지 못했습니다.');
@@ -92,7 +90,7 @@ export function AiAnswerGenerator({
       const response = await fetch('/api/ai/flow-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeQuestionId: questionId, outline, companyInfo, followups: currentFollowups }),
+        body: JSON.stringify({ resumeQuestionId: questionId, outline, followups: currentFollowups }),
       });
       const body = (await response.json()) as FlowOptionsResponse;
       if (!response.ok || !body.ok || !body.data) throw new Error(body.error || '초안 흐름을 제안받지 못했습니다.');
@@ -146,7 +144,7 @@ export function AiAnswerGenerator({
       const response = await fetch('/api/ai/generate-answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resumeQuestionId: questionId, outline, companyInfo, followups: finalFollowups, selectedFlow: flow }),
+        body: JSON.stringify({ resumeQuestionId: questionId, outline, followups: finalFollowups, selectedFlow: flow }),
       });
       const body = (await response.json()) as GenerateResponse;
       if (!response.ok || !body.ok || !body.data) throw new Error(body.error || 'AI 초안을 생성하지 못했습니다.');

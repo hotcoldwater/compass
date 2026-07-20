@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import type { AuthenticatedUser, AuthEnv } from '../auth';
 import { ensureExperienceCardTables } from '../experience-cards';
+import { ensureCompanyTables } from '../companies';
 
 type Env = AuthEnv;
 
@@ -19,6 +20,7 @@ export type AnswerContext = {
   facts: Array<Record<string, unknown>>;
   confirmedMetrics: string[];
   primaryExperienceCardId: number | null;
+  companyInfo: string;
 };
 
 export type AnswerContextResult =
@@ -31,11 +33,14 @@ export async function loadAnswerContext(
   questionId: number
 ): Promise<AnswerContextResult> {
   await ensureExperienceCardTables(env);
+  await ensureCompanyTables(env);
   const sql = neon(env.DATABASE_URL);
 
-  const questions = await sql`SELECT q.id, q.question_text, q.limit_type, q.limit_value, q.company_info, r.company_name, r.job_field FROM resume_questions q INNER JOIN resumes r ON r.id=q.resume_id WHERE q.id=${questionId} AND r.user_id=${user.id} LIMIT 1`;
+  const questions = await sql`SELECT q.id, q.question_text, q.limit_type, q.limit_value, q.company_info, r.company_name, r.job_field, co.summary AS company_summary, co.raw_note AS company_raw_note FROM resume_questions q INNER JOIN resumes r ON r.id=q.resume_id LEFT JOIN companies co ON co.id=r.company_id AND co.user_id=${user.id} WHERE q.id=${questionId} AND r.user_id=${user.id} LIMIT 1`;
   if (!questions.length) return { ok: false, status: 404, error: '문항을 찾을 수 없습니다.' };
-  const question = questions[0] as AnswerContextQuestion;
+  const record = questions[0] as AnswerContextQuestion & { company_summary: string | null; company_raw_note: string | null };
+  const { company_summary, company_raw_note, ...question } = record;
+  const companyInfo = company_summary || company_raw_note || question.company_info || '';
 
   const links = await sql`SELECT l.experience_card_id, l.story_angle_id, l.is_primary, c.title, c.situation, c.task, c.actions, c.result, c.learning, s.title AS story_title, s.core_message, s.situation AS story_situation, s.challenge, s.action AS story_action, s.result AS story_result, s.learning AS story_learning FROM resume_question_experience_links l INNER JOIN experience_cards c ON c.id=l.experience_card_id LEFT JOIN experience_story_angles s ON s.id=l.story_angle_id WHERE l.resume_question_id=${questionId} AND c.user_id=${user.id} ORDER BY l.is_primary DESC,l.link_order`;
   if (!links.length) return { ok: false, status: 400, error: 'AI 작성 전에 문항에 사용할 경험카드를 연결해주세요.' };
@@ -70,6 +75,7 @@ export async function loadAnswerContext(
       facts,
       confirmedMetrics: metrics.map((metric) => (metric as { display_text: string }).display_text),
       primaryExperienceCardId,
+      companyInfo,
     },
   };
 }
